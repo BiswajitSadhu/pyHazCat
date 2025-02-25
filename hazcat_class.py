@@ -311,6 +311,7 @@ class HAZCAT():
             # consider all types: F, M, S and take the max value as dcf
             search_string_type = '|'.join(['F', 'M', 'S'])
             df = df[df['Type'].str.contains(search_string_type, na=False)]
+            print('df inhal:', df)
             dcf = df['inh_e_sv_per_bq_1μm'].max()
             dcfs.append(dcf)
 
@@ -1009,10 +1010,10 @@ class HAZCAT():
         ###
         E1s = []
         for ndx, rad in enumerate(self.rads_list):
-            sum_ep = float(self.get_nuclide_info(rad)['Total'])
+            sum_ep = float(self.get_nuclide_info(rad)['Photon'])
             E1s.append(sum_ep)
 
-        print('E1s', E1s)
+        # print('E1s', E1s)
         return E1s
     
     def compute_threshold_quantity_HC2_in_gram_and_curie(self, Rs, aws, half_lives, inh_dcfs, sub_dcfs, 
@@ -1052,6 +1053,10 @@ class HAZCAT():
             R = Rs[ndx]
             # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm
             SA = (np.log(2) * N_0)/(AW * t_half * 3.7E+10)
+            print("DCF_inhalationsss:", DCF_inhalation)
+            if np.isnan(DCF_inhalation):
+                print(f"WARNING: Inhalation DCF not found for {rad} during HC2 TQ calculation".format(rad))
+                DCF_inhalation = 0
 
             # gm 
             TQ_HC2 = np.array(1/(R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)))
@@ -1170,6 +1175,7 @@ class HAZCAT():
             S = 30
             numerator = (10*S**2* C_gamma)     
             denominator = (E1 * mu_a * 24 * expofac * np.exp(-100*mu_a *S))                    
+            print('E1_:', E1, mu_a)
             direct_expo_TQ_HC3 = (numerator/denominator)
                                    
             # air exposure: submersion dose
@@ -1219,7 +1225,8 @@ class HAZCAT():
             if rad in inert_gas_lists:
                 submersion_TQ_HC3_curie = compute_submersion_TQ_HC3(rad)
             else:
-                print(f"NOTE: The submersion dose is not computed for {rad} as it is not an inert gas".format())
+                print(f"NOTE: The submersion dose is not computed during HC3 TQ computation "
+                      f"for {rad} as it is not an inert gas".format())
                 submersion_TQ_HC3_curie = np.inf
                 # print(f"Computed submersion_TQ_HC3_curie: {submersion_TQ_HC3_curie}")
             '''
@@ -1234,9 +1241,21 @@ class HAZCAT():
                                    
             dominant_pathway_text = ''
 
+            if np.isnan(iTQ_HC3_curie):
+                iTQ_HC3_curie = np.inf
+            if np.isnan(fing_TQ_HC3_curie):
+                fing_TQ_HC3_curie = np.inf
+            if np.isnan(wing_TQ_HC3_curie):
+                wing_TQ_HC3_curie = np.inf
+            if np.isnan(direct_expo_TQ_HC3):
+                direct_expo_TQ_HC3 = np.inf
+            if np.isnan(submersion_TQ_HC3_curie):
+                submersion_TQ_HC3_curie = np.inf
+
             stack_all_tq_hc3_curie = [iTQ_HC3_curie, fing_TQ_HC3_curie, 
                                  wing_TQ_HC3_curie, direct_expo_TQ_HC3,
                                   submersion_TQ_HC3_curie]
+
             
             #if r_factor_hc3 is not None:
             #    x = r_factor_hc3[ndx]

@@ -559,9 +559,10 @@ rf2_widgets = {}
 rf3_widgets = {}
 def create_row(window, row_index, rad):
     """Helper function to create a row for inventory and release fractions input."""
+    height = 1.5
     inv_list_label = ttk.Label(window, text=f"Inventory for {rad}:")
     inv_list_label.grid(row=row_index, column=0, padx=5, pady=5)
-    inv_list_text = tk.Text(window, width=30, height=3)
+    inv_list_text = tk.Text(window, width=30, height=height)
     inv_list_text.grid(row=row_index, column=1, padx=5, pady=5)
     
     # Store the Text widget reference in the dictionary with rad as the key
@@ -569,14 +570,14 @@ def create_row(window, row_index, rad):
 
     RF_HC2_list_label = ttk.Label(window, text="Release Fraction for HC-2 (Optional):")
     RF_HC2_list_label.grid(row=row_index, column=2, padx=5, pady=5)
-    RF_HC2_list_text = tk.Text(window, width=30, height=3)
+    RF_HC2_list_text = tk.Text(window, width=30, height=height)
     RF_HC2_list_text.grid(row=row_index, column=3, padx=5, pady=5)
     # Store the Text widget reference in the dictionary with rad as the key
     rf2_widgets[rad] = RF_HC2_list_text
 
     RF_HC3_list_label = ttk.Label(window, text="Release Fraction for HC-3 (Optional):")
     RF_HC3_list_label.grid(row=row_index, column=4, padx=5, pady=5)
-    RF_HC3_list_text = tk.Text(window, width=30, height=3)
+    RF_HC3_list_text = tk.Text(window, width=30, height=height)
     RF_HC3_list_text.grid(row=row_index, column=5, padx=5, pady=5)
     # Store the Text widget reference in the dictionary with rad as the key
     rf3_widgets[rad] = RF_HC3_list_text
@@ -584,7 +585,7 @@ def create_row(window, row_index, rad):
     output_row = row_index+1
     f_label = ttk.Label(window, text="Output file (Optional):")
     f_label.grid(row=output_row, column=0, padx=5, pady=5)
-    f_text = tk.Text(window, width=30, height=3)
+    f_text = tk.Text(window, width=30, height=height)
     f_text.grid(row=output_row, column=1, padx=5, pady=5)
     # Store the Text widget reference in the dictionary with rad as the key
     filename_widgets['output_file'] = f_text

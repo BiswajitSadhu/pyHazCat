@@ -557,6 +557,48 @@ inventory_widgets = {}
 filename_widgets = {}
 rf2_widgets = {}
 rf3_widgets = {}
+
+def create_row(window, row_index=None, rad=None):
+    """Creates the fixed Output row (if not created) and adds Inventory rows dynamically."""
+    height = 1.5
+
+    # Ensure the Output File row is always at row 0
+    if "output_file" not in filename_widgets:
+        f_label = ttk.Label(window, text="Output file (Optional):")
+        f_label.grid(row=0, column=5, columnspan=2,padx=1, pady=1)
+        f_text = tk.Text(window, width=15, height=height)
+        f_text.grid(row=0, column=6, columnspan=2, padx=1, pady=1)
+        filename_widgets["output_file"] = f_text  # Store reference
+
+    # If rad is None, just return after creating the output row
+    if rad is None:
+        return
+
+    # Start inventory rows from row 1
+    if row_index is None:
+        row_index = len(inventory_widgets) + 1  # Dynamically determine row position
+
+    inv_list_label = ttk.Label(window, text=f"Inventory for {rad}:")
+    inv_list_label.grid(row=row_index, column=0, padx=5, pady=5)
+    inv_list_text = tk.Text(window, width=30, height=height)
+    inv_list_text.grid(row=row_index, column=1, padx=5, pady=5)
+    inventory_widgets[rad] = inv_list_text  # Store reference
+
+    RF_HC2_list_label = ttk.Label(window, text="Release Fraction for HC-2 (Optional):")
+    RF_HC2_list_label.grid(row=row_index, column=2, padx=5, pady=5)
+    RF_HC2_list_text = tk.Text(window, width=30, height=height)
+    RF_HC2_list_text.grid(row=row_index, column=3, padx=5, pady=5)
+    rf2_widgets[rad] = RF_HC2_list_text
+
+    RF_HC3_list_label = ttk.Label(window, text="Release Fraction for HC-3 (Optional):")
+    RF_HC3_list_label.grid(row=row_index, column=4, padx=5, pady=5)
+    RF_HC3_list_text = tk.Text(window, width=30, height=height)
+    RF_HC3_list_text.grid(row=row_index, column=5, padx=5, pady=5)
+    rf3_widgets[rad] = RF_HC3_list_text
+
+    return inv_list_text, filename_widgets["output_file"]  # Return output text reference
+
+'''
 def create_row(window, row_index, rad):
     """Helper function to create a row for inventory and release fractions input."""
     height = 1.5
@@ -581,7 +623,7 @@ def create_row(window, row_index, rad):
     RF_HC3_list_text.grid(row=row_index, column=5, padx=5, pady=5)
     # Store the Text widget reference in the dictionary with rad as the key
     rf3_widgets[rad] = RF_HC3_list_text
-    
+
     output_row = row_index+1
     f_label = ttk.Label(window, text="Output file (Optional):")
     f_label.grid(row=output_row, column=0, padx=5, pady=5)
@@ -590,8 +632,18 @@ def create_row(window, row_index, rad):
     # Store the Text widget reference in the dictionary with rad as the key
     filename_widgets['output_file'] = f_text
     
+    # Ensure the output row is created only once
+    #if "output_file" not in filename_widgets:
+    #    output_row = row_index + 1
+    #    f_label = ttk.Label(window, text="Output file (Optional):")
+    #    f_label.grid(row=output_row, column=0, padx=5, pady=5)
+    #    f_text = tk.Text(window, width=30, height=height)
+    #    f_text.grid(row=output_row, column=1, padx=5, pady=5)
+    #    filename_widgets["output_file"] = f_text  # Store it to avoid re-creation
+    # filename_widgets["output_file"]
+    
     return inv_list_text, f_text
-
+'''
 def get_inventory_inputs():
     """Retrieve the input from all inventory Text widgets."""
     inventories = {}
@@ -675,10 +727,10 @@ rads_listbox.grid(row=0, column=1, columnspan=2, padx=5, pady=5)
 
 # Label for the selected list display
 selected_list_label = ttk.Label(window, text="Selected List:")
-selected_list_label.grid(row=0, column=3, padx=5, pady=5)
+selected_list_label.grid(row=0, column=3, padx=1, pady=1)
 # Listbox to display the selected radionuclides; len(radionuclide_list)
 selected_list_box = tk.Listbox(window, selectmode=tk.MULTIPLE, height=10)
-selected_list_box.grid(row=0, column=4, columnspan=2, padx=5, pady=5)
+selected_list_box.grid(row=0, column=4, columnspan=2, padx=1, pady=1)
 
 # Bind selection change event to the AutocompleteCombobox
 rads_listbox.bind("<<ComboboxSelected>>", update_selected_list)

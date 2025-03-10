@@ -15,8 +15,643 @@ class HAZCAT():
         self.inventories = config['inventories']
         self.rads_list = config['rads_list']
         self.f = config['output_filename']
-        
-    
+
+    def get_dcfs_for_radionuclides(self):
+        """
+        Computes max DCF values for a list of radionuclides.
+
+        Parameters:
+        rads_list (list): List of radionuclides to process.
+
+        Returns:
+        dict: Dictionary with radionuclides as keys and their DCF dictionaries as values.
+        """
+        return {rad: self.compute_max_dcf(rad) for rad in self.rads_list}
+
+        # Example usage:
+        #rads_list = ['Cs-137', 'Co-60', 'Sr-90']
+        #dcfs_dicts_rads_list = get_dcfs_for_radionuclides(rads_list)
+
+        #print(dcfs_dicts_rads_list)
+
+    def screen_Annex_G_ICRP119_dcf_inh_public_for_radionuclide(self, file_path, radionuclide):
+        """
+        Reads an Excel file and returns rows that match the given radionuclide.
+
+        Parameters:
+            file_path (str): Path to the Excel file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            df = pd.read_excel(file_path, engine="openpyxl")
+            # df.columns = df.columns.str.strip()
+            df.columns = ['Nuclide', 'Half-life', 'Type', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
+                          'inh_1_year', 'inh_5_years', 'inh_10_years', 'inh_15_years',
+                          'inh_adult']
+
+            if "Nuclide" in df.columns:
+                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                return df_filtered if not df_filtered.empty else "No data found"
+            else:
+                return "No 'Nuclide' column found"
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Annex_H_ICRP119_dcf_inhal_reactive_soluble_gases_public_for_radionuclide(self, file_path, radionuclide):
+        """
+        Reads a CSV file, ignores the first column (index), and returns rows matching the given radionuclide.
+
+        Parameters:
+            file_path (str): Path to the CSV file.
+            radionuclide (str): Radionuclide name (e.g., "H-3").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            df = pd.read_csv(self, file_path, skiprows=1, index_col=0)
+            df.columns = ['Nuclide', 'Half-life', 'Type', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
+                          'inh_1_year', 'inh_5_years', 'inh_10_years', 'inh_15_years', 'inh_adult',
+                          'VAPOUR_FORM']
+
+            df.columns = df.columns.str.strip()
+
+            if "Nuclide" in df.columns:
+                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                return df_filtered if not df_filtered.empty else "No data found"
+            else:
+                return "No 'Nuclide' column found"
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_A2_DOE_STD_1196_2011_dcf_inhal_by_radionuclide(self, file_path, radionuclide):
+        """
+        Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the cleaned CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            # Read CSV, treating the first row as the header
+            df = pd.read_csv(file_path, skiprows=0)
+            df.columns = ['Index', 'Nuclide', 'Type', 'f1', 'inh_infant', 'inh_1_year',
+                          'inh_5_year', 'inh_10_year', 'inh_15_year', 'inh_adult', 'Reference Person']
+            # first column index is removed
+            df = df.iloc[:, 1:]
+
+            # Ensure "Nuclide" column exists
+            if "Nuclide" in df.columns:
+                # Filter rows where Nuclide matches the input (case insensitive)
+                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+            else:
+                return "No 'Nuclide' column found in the file."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_5_JAERI_dcf_inh_particulates_public_by_radionuclide(self, file_path, radionuclide):
+        """
+        Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the cleaned CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            # Read CSV, treating the first row as the header
+            df = pd.read_csv(file_path, skiprows=0)
+            # df.columns = ['Index', 'Nuclide', 'Type', 'f1',  'Newborn', '1-year' ,'5-year', '10-year',
+            #      '15-year', 'Adult','Reference Person']
+            # first column index is removed
+            # print(df)
+            df.columns = ['Index', 'Nuclide', 'Half-life', 'Type', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
+                          'inh_1_year', 'inh_5_years', 'inh_10_years', 'inh_15_years', 'inh_adult']
+
+            df = df.iloc[:, 1:]
+            # print(df)
+
+            # Ensure "Nuclide" column exists
+            if "Nuclide" in df.columns:
+                # Filter rows where Nuclide matches the input (case insensitive)
+                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+            else:
+                return "No 'Nuclide' column found in the file."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_7_JAERI_dcf_inh_Public_Soluble_Reactive_Gases_Vapours_public_by_radionuclide(self, file_path,
+                                                                                                  radionuclide):
+        """
+        Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the cleaned CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            # Read CSV, treating the first row as the header
+            df = pd.read_csv(file_path, header=0)
+            # df.columns = ['Index', 'Nuclide', 'Type', 'f1',  'Newborn', '1-year' ,'5-year', '10-year',
+            #      '15-year', 'Adult','Reference Person']
+            df.columns = ['Index', 'Nuclide', 'Chemical Form', 'Half-life', 'Type', 'percent_deposit', 'f1',
+                          'inh_infant', 'f1_age_g_gt_1a', 'inh_1_year', 'inh_5_years',
+                          'inh_10_years', 'inh_15_years', 'inh_adult']
+
+            # first column index is removed
+            df = df.iloc[:, 1:]
+            # print(df)
+            # Ensure "Nuclide" column exists
+            if "Nuclide" in df.columns:
+                # Filter rows where Nuclide matches the input (case insensitive)
+                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+            else:
+                return "No 'Nuclide' column found in the file."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_4_6_FGR_15_dcf_ecerman_submersion(self, file_path, radionuclide,
+                                                       sheet_name='submersion_dose'):
+        """
+        Return Dose Conversion Factors (Submersion) specific to radionuclide.
+
+        This function retrieves dose conversion factors (DCF) for submersion exposure from the specified Excel file.
+        It filters the data based on the given radionuclide.
+
+        Args:
+            file_path (str): The path to the Excel file containing submersion DCF data.
+            radionuclide (str): The name of the radionuclide to filter data for.
+            sheet_name (str, optional): The sheet name in the Excel file containing the data. Defaults to 'submersion_dose'.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing DCF values for the specified radionuclide.
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist.
+            ValueError: If the radionuclide is not found in the dataset.
+        """
+        try:
+            # Load Excel sheet
+            df = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
+
+            # Drop fully empty rows
+            df.dropna(axis=0, how='all', inplace=True)
+
+            # Rename columns (ensure they exist before renaming)
+            expected_columns = ['Nuclide', 'sub_infant', 'sub_1_year', 'sub_5_years',
+                                'sub_10_years', 'sub_15_years', 'sub_adult']
+
+            if len(df.columns) >= len(expected_columns):
+                df.columns = expected_columns  # Assign column names if they match expected structure
+
+            # Filter rows based on the radionuclide
+            df_filtered = df[df['Nuclide'] == radionuclide]
+
+            if df_filtered.empty:
+                raise ValueError(f"No data found for radionuclide: {radionuclide}")
+
+            return df_filtered
+
+        except FileNotFoundError:
+            print(f"Error: The file '{file_path}' was not found.")
+            return None
+        except ValueError as e:
+            print(f"Error: {e}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
+
+    def screen_Table_A3_DOE_STD_1196_2011_dcf_submersion(self, file_path, radionuclide):
+        """
+        Return Dose Conversion Factors (Submersion) for a specific radionuclide from the DOE-STD-1196-2011 dataset.
+
+        This function reads an Excel file, extracts submersion dose conversion factor (DCF) data,
+        and filters rows based on the given radionuclide.
+
+        Args:
+            file_path (str): The path to the Excel file containing the submersion DCF data.
+            radionuclide (str): The name of the radionuclide to filter data for.
+            sheet_name (str, optional): The sheet name in the Excel file. Defaults to the first sheet if None.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing DCF values for the specified radionuclide.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If the radionuclide is not found in the dataset.
+        """
+        try:
+            # Load Excel file
+            df = pd.read_excel(file_path, engine="openpyxl")
+
+            # Merge 2nd and 3rd columns (Col2 and Col3) with a space separator
+            df["Merged_Col2_Col3"] = df.iloc[:, 1].astype(str) + " " + df.iloc[:, 2].astype(str)
+
+            # Drop the original columns if needed
+            df.drop(df.columns[[1, 2]], axis=1, inplace=True)
+            # print(df)
+            # Drop fully empty rows
+            # df.dropna(axis=0, how='all', inplace=True)
+            df.columns = ["Nuclide", "sub_adult", "Half-life"]
+
+            # Ensure "Nuclide" column exists before filtering
+            if 'Nuclide' not in df.columns:
+                raise ValueError("Expected column 'Nuclide' not found in dataset.")
+
+            # Filter rows for the specified radionuclide
+            df_filtered = df[df['Nuclide'] == radionuclide]
+
+            if df_filtered.empty:
+                raise ValueError(f"No data found for radionuclide: {radionuclide}")
+
+            return df_filtered
+
+        except FileNotFoundError:
+            print(f"Error: The file '{file_path}' was not found.")
+            return None
+        except ValueError as e:
+            print(f"Error: {e}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
+
+    def screen_annex_a_icrp119_dcf_inhal_worker(self, file_path, radionuclide, sheet_name=0):
+        """
+        Reads the given Excel file, filters rows based on the radionuclide,
+        merges the 2nd and 3rd columns with space separation, and returns the result.
+
+        Args:
+            file_path (str): Path to the Excel file.
+            radionuclide (str): Radionuclide name to filter (e.g., "Cs-137").
+            sheet_name (str or int): Name or index of the sheet to read.
+
+        Returns:
+            pd.DataFrame or str: Filtered DataFrame with merged columns, or an error message.
+        """
+        try:
+            # Load the Excel file
+            df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+            # Drop fully empty rows
+            df.dropna(axis=0, how='all', inplace=True)
+
+            # Ensure we have the expected number of columns before renaming
+            expected_cols = 9  # Adjust this if needed
+            if df.shape[1] < expected_cols:
+                return f"Error: Expected at least {expected_cols} columns, found {df.shape[1]}."
+
+            # Rename columns
+            df.columns = ['Element', 'Nuclide', 'Half-life', 'Type', 'inh_f1', 'inh_adult_1mu_m',
+                          'inh_adult_5mu_m', 'ing_f1', 'ing_adult']
+
+            # Drop the first column (Element)
+            df.drop(columns=['Element'], axis=1, inplace=True)
+
+            # Filter based on the radionuclide
+            df_filtered = df[df['Nuclide'].fillna('').astype(str).str.startswith(radionuclide)]
+
+            # If no rows match, return a message
+            return df_filtered if not df_filtered.empty else "No matching data found for the given radionuclide."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Annex_B_ICRP119_dcf_inhal_reactive_soluble_gases_worker(self, file_path, radionuclide):
+        """
+        Reads a CSV file, ignores the first column (index), and returns rows matching the given radionuclide.
+
+        Parameters:
+            file_path (str): Path to the CSV file.
+            radionuclide (str): Radionuclide name (e.g., "H-3").
+
+        Returns:
+            DataFrame or str: Filtered rows containing the specified radionuclide, or an error message.
+        """
+        try:
+            # Read the CSV, skipping the first row and detecting delimiter
+            df = pd.read_csv(file_path, skiprows=1, sep=None, engine="python")
+
+            # Ensure the correct number of columns before renaming
+            expected_cols = 4  # Adjust if the actual file has a different structure
+            if df.shape[1] < expected_cols:
+                return f"Error: Expected at least {expected_cols} columns, found {df.shape[1]}."
+
+            # Rename columns appropriately
+            df.columns = ['Nuclide', 'Chemical Form', 'Half-life', 'inh_adult']
+
+            # Drop rows where Nuclide is NaN
+            df.dropna(subset=["Nuclide"], inplace=True)
+
+            # Standardize radionuclide search (strip spaces and convert to uppercase)
+            df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+
+            return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_3_JAERI_dcf_inh_ing_particulates_worker_by_radionuclide(self, file_path, radionuclide):
+        """
+        Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the cleaned CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame or str: Filtered rows containing the specified radionuclide, or an error message.
+        """
+        try:
+            # Read CSV
+            df = pd.read_csv(file_path, skiprows=0)
+
+            # Check if at least 9 columns exist
+            expected_cols = 9  # Adjust if necessary
+            if df.shape[1] < expected_cols:
+                return f"Error: Expected at least {expected_cols} columns, found {df.shape[1]}."
+
+            # Rename columns
+            df.columns = ['Element', 'Nuclide', 'Half-life', 'Type', 'inh_f1', 'inh_adult_1mu_m',
+                          'inh_adult_5mu_m', 'ing_f1', 'ing_adult']
+
+            # Drop the first column ("Element")
+            df = df.iloc[:, 1:]
+
+            # Ensure "Nuclide" column exists
+            if "Nuclide" not in df.columns:
+                return "Error: No 'Nuclide' column found in the file."
+
+            # Filter rows where Nuclide starts with the input (case insensitive)
+            df_filtered = df[df["Nuclide"].str.startswith(radionuclide, na=False)]
+
+            # If no rows match, return a message
+            return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+    def screen_Table_6_JAERI_dcf_inh_public_soluble_reactive_gases_vapours_workers_by_radionuclide(self, file_path,
+                                                                                                   radionuclide):
+        """
+        Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the cleaned CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame or str: Filtered rows containing the specified radionuclide, or an error message.
+        """
+        try:
+            # Read CSV with the first row as header
+            df = pd.read_csv(file_path, header=0)
+
+            # Ensure we have enough columns before renaming
+            expected_cols = 5  # Adjust this if necessary
+            if df.shape[1] < expected_cols:
+                return f"Error: Expected at least {expected_cols} columns, but found {df.shape[1]}."
+
+            # Rename columns
+            df.columns = ['Index', 'Nuclide', 'Chemical Form', 'Half-life', 'inh_adult']
+
+            # Drop the first column ("Index")
+            df.drop(columns=['Index'], inplace=True, errors='ignore')
+
+            # Ensure "Nuclide" column exists
+            if "Nuclide" not in df.columns:
+                return "Error: No 'Nuclide' column found in the file."
+
+            # Filter rows where Nuclide matches the input (case insensitive)
+            df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+
+            return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+
+        except Exception as e:
+            return f"Error: {e}"
+
+
+    def merge_dataframes_with_source_hc2(self, **dfs):
+        """
+        Merges multiple DataFrames while adding a column to specify their source.
+
+        Parameters:
+            **dfs: Dictionary of named DataFrames (e.g., result_tab7="Table 7")
+
+        Returns:
+            Merged DataFrame or an error message if no valid DataFrames exist.
+        """
+        valid_dfs = []
+
+        for name, df in dfs.items():
+            if isinstance(df, pd.DataFrame):  # Check if it's a valid DataFrame
+                df = df.copy()  # Avoid modifying the original
+                df["Reference"] = name  # Add source column
+                df["Valid for"] = 'Public'
+                valid_dfs.append(df)
+
+        if not valid_dfs:
+            return "No valid DataFrames to merge."
+
+        return pd.concat(valid_dfs, ignore_index=True, sort=False)
+
+    def merge_dataframes_with_source_hc3(self, **dfs):
+        """
+        Merges multiple DataFrames while adding a column to specify their source.
+
+        Parameters:
+            **dfs: Dictionary of named DataFrames (e.g., result_tab7="Table 7")
+
+        Returns:
+            Merged DataFrame or an error message if no valid DataFrames exist.
+        """
+        valid_dfs = []
+
+        for name, df in dfs.items():
+            if isinstance(df, pd.DataFrame):  # Check if it's a valid DataFrame
+                df = df.copy()  # Avoid modifying the original
+                df["Reference"] = name  # Add source column
+                df["Valid for"] = 'Worker'
+                valid_dfs.append(df)
+
+        if not valid_dfs:
+            return "No valid DataFrames to merge."
+
+        return pd.concat(valid_dfs, ignore_index=True, sort=False)
+
+    def filter_max_value_by_reference(self, df, radionuclide, nuclide_col, value_col, reference_col):
+        """
+        Filters the dataframe for the given radionuclide and selects the maximum value based on priority order:
+        1. 'ICRP119' or 'FGR' (take the maximum among these).
+        2. If none found, take the maximum from 'DOE-STD'.
+        3. If still none found, take the maximum from 'JAERI'.
+        4. If no data is available after filtering, return a message.
+
+        Args:
+            df (pd.DataFrame): Input dataframe.
+            radionuclide (str): Radionuclide name to filter.
+            nuclide_col (str): Column name for radionuclide.
+            value_col (str): Column name for values (e.g., "inh_adult").
+            reference_col (str): Column name for reference.
+
+        Returns:
+            pd.DataFrame or str: Filtered row(s) with the maximum value, or a message if no data is found.
+        """
+        # Ensure column names exist in the dataframe
+        required_cols = [nuclide_col, value_col, reference_col]
+        # print(required_cols)
+        for col in required_cols:
+            if col not in df.columns:
+                return f"Error: Column '{col}' not found in dataframe."
+
+        # Convert all columns to string to avoid issues
+        # print(df[nuclide_col] )
+        df[nuclide_col] = df[nuclide_col].astype(str).str.strip().str.upper()
+        df[reference_col] = df[reference_col].astype(str)
+
+        # Filter rows for the given radionuclide
+        df_filtered = df[df[nuclide_col] == radionuclide.upper()]
+        if df_filtered.empty:
+            return f"No data available for radionuclide: {radionuclide}"
+
+        # Function to check if reference contains specific keywords
+        def contains_keyword(df, keywords):
+            return df[df[reference_col].str.contains('|'.join(keywords), case=False, na=False)]
+
+        # Step 1: Look for 'ICRP119' or 'FGR' and get max value
+        df_priority1 = contains_keyword(df_filtered, ["ICRP_119", "FGR"])
+        if not df_priority1.empty:
+            df_priority1.loc[:, value_col] = pd.to_numeric(df_priority1[value_col], errors='coerce')
+
+            # df_priority1[value_col] = pd.to_numeric(df_priority1[value_col], errors='coerce')
+            print(f"DCF (max) taken from {df_priority1['Reference'].iloc[0]}".format())
+            return df_priority1[value_col].max()
+
+        # Step 2: If no 'ICRP119' or 'FGR', look for 'DOE-STD'
+        df_priority2 = contains_keyword(df_filtered, ["DOE_STD"])
+        if not df_priority2.empty:
+            df_priority2.loc[:, value_col] = pd.to_numeric(df_priority2[value_col], errors='coerce')
+
+            # df_priority2[value_col] = pd.to_numeric(df_priority2[value_col], errors='coerce')
+            print(f"DCF (max) taken from DOE-STD-1196-2011 {df_priority2['Reference']}".format())
+            return df_priority2[value_col].max()
+
+        # Step 3: If no 'DOE-STD', look for 'JAERI'
+        df_priority3 = contains_keyword(df_filtered, ["JAERI"])
+        if not df_priority3.empty:
+            df_priority3.loc[:, value_col] = pd.to_numeric(df_priority3[value_col], errors='coerce')
+            print("DCF (max) taken from JAERI-Data/Code 2002-013")
+            # df_priority3[value_col] = pd.to_numeric(df_priority3[value_col], errors='coerce')
+            return df_priority3[value_col].max(skipna=True)
+
+        # Step 4: If no data found after filtering, return message
+        return f"No data available for radionuclide: {radionuclide}"
+
+    def compute_max_dcf(self, radionuclide):
+
+        dict_dcf = {}
+        # INH_HC2
+        result_annexg = self.screen_Annex_G_ICRP119_dcf_inh_public_for_radionuclide(
+            "library/inhalation_HC2/Annex_G_ICRP119_dcf_inh_public.xlsx",
+            radionuclide)
+        result_annexh = self.screen_Annex_H_ICRP119_dcf_inhal_reactive_soluble_gases_public_for_radionuclide(
+            "library/inhalation_HC2/Annex_H_ICRP119_dcf_inhal_reactive_soluble_gases_public.csv",
+            radionuclide)
+        result_tab_a2 = self.screen_Table_A2_DOE_STD_1196_2011_dcf_inhal_by_radionuclide(
+            "library/inhalation_HC2/Table_A2-DOE-STD-1196-2011_dcf_inhal.csv",
+            radionuclide)
+        result_tab5 = self.screen_Table_5_JAERI_dcf_inh_particulates_public_by_radionuclide(
+            "library/inhalation_HC2/Table_5_JAERI_dcf_inh_particulates_public.csv",
+            radionuclide)
+        result_tab7 = self.screen_Table_7_JAERI_dcf_inh_Public_Soluble_Reactive_Gases_Vapours_public_by_radionuclide(
+            "library/inhalation_HC2/Table_7_JAERI_dcf_inh_Public_Soluble_Reactive_Gases_Vapours.csv",
+            radionuclide)
+
+        # SUB HC2
+        result_sub_fgr15_hc2 = self.screen_Table_4_6_FGR_15_dcf_ecerman_submersion(
+            "library/submersion_HC2/Dose_Table_4_6_ecerman_final_FGR15.xlsx",
+            radionuclide)
+        result_sub_dcf_doe_std = self.screen_Table_A3_DOE_STD_1196_2011_dcf_submersion(
+            "library/submersion_HC2/Table_A3_DOE_STD_1196_2011_dcf_submersion.xlsx",
+            radionuclide)
+
+        # INH_HC3
+        result_annexa = self.screen_annex_a_icrp119_dcf_inhal_worker(
+            "library/inhalation_HC3/AnnexA_ICRP119_dcf_inhal_Worker.xlsx",
+            radionuclide)
+        result_annexb = self.screen_Annex_B_ICRP119_dcf_inhal_reactive_soluble_gases_worker(
+            "library/inhalation_HC3/AnnexB_ICRP119_dcf_inh_soluble_reactive_gas_worker.csv",
+            radionuclide)
+        result_tab3 = self.screen_Table_3_JAERI_dcf_inh_ing_particulates_worker_by_radionuclide(
+            "library/inhalation_HC3/Table3_JAERI_dcf_ing_inh_PARTICULATES_Worker.csv",
+            radionuclide)
+        result_tab6 = self.screen_Table_6_JAERI_dcf_inh_public_soluble_reactive_gases_vapours_workers_by_radionuclide(
+            "library/inhalation_HC3/Table6_JAERI_dcf_Soluble_Reactive_Gases_Worker.csv",
+            radionuclide)
+
+        # Merge dataframes
+        merged_df_inh_hc2 = self.merge_dataframes_with_source_hc2(
+            Table_7_JAERI_DATA_CODE_2002_013=result_tab7,
+            Table_5_JAERI_DATA_CODE_2002_013=result_tab5,
+            Annex_G_ICRP_119=result_annexg,
+            Annex_H_ICRP_119=result_annexh
+        )
+
+        merged_df_sub_hc2 = self.merge_dataframes_with_source_hc2(
+            Table_4_6_FGR15=result_sub_fgr15_hc2,
+            Table_A3_DOE_STD_1196_2011=result_sub_dcf_doe_std
+        )
+
+        merged_df_inh_hc3 = self.merge_dataframes_with_source_hc3(
+            Annex_A_ICRP_119=result_annexa,
+            Annex_B_ICRP_119=result_annexb,
+            Table_3_JAERI_DATA_CODE_2002_013=result_tab3,
+            Table_6_JAERI_DATA_CODE_2002_013=result_tab6
+        )
+
+        merged_df_ing_hc3 = self.merge_dataframes_with_source_hc3(
+            Annex_A_ICRP_119=result_annexa,
+            Annex_B_ICRP_119=result_annexb,
+            Table_6_JAERI_DATA_CODE_2002_013=result_tab6
+        )
+
+        # Get max DCF values
+        max_dcf_inh_hc2 = self.filter_max_value_by_reference(merged_df_inh_hc2, radionuclide, "Nuclide", "inh_adult",
+                                                        "Reference")
+        max_dcf_sub_hc2 = self.filter_max_value_by_reference(merged_df_sub_hc2, radionuclide, "Nuclide", "sub_adult",
+                                                        "Reference")
+        max_dcf_inh_hc3 = self.filter_max_value_by_reference(merged_df_inh_hc3, radionuclide, "Nuclide", "inh_adult_1mu_m",
+                                                        "Reference")
+        max_dcf_ing_hc3 = self.filter_max_value_by_reference(merged_df_ing_hc3, radionuclide, "Nuclide", "ing_adult",
+                                                        "Reference")
+
+        dict_dcf['max_dcf_inh_hc2'] = max_dcf_inh_hc2
+        dict_dcf['max_dcf_sub_hc2'] = max_dcf_sub_hc2
+        dict_dcf['max_dcf_inh_hc3'] = max_dcf_inh_hc3
+        dict_dcf['max_dcf_ing_hc3'] = max_dcf_ing_hc3
+
+        return dict_dcf
+
     def find_aws(self):
         xls = pd.ExcelFile("library/AWS.xls")
         df_tq = pd.read_excel(xls)
@@ -1016,7 +1651,9 @@ class HAZCAT():
         # print('E1s', E1s)
         return E1s
     
-    def compute_threshold_quantity_HC2_in_gram_and_curie(self, Rs, aws, half_lives, inh_dcfs, sub_dcfs, 
+    def compute_threshold_quantity_HC2_in_gram_and_curie(self,
+                                                         Rs, aws, half_lives,
+                                                         dcfs_dicts_rads_list,
                                                          CHI_BY_Q = 1e-04):
         # NRC approach
         # HC-2: 1 rem (i.e. 10 mSv) at 100 m distance
@@ -1048,8 +1685,8 @@ class HAZCAT():
         for ndx, rad in enumerate(self.rads_list):
             AW = aws[ndx]
             t_half = half_lives[ndx]
-            DCF_inhalation = inh_dcfs[ndx]
-            DCF_submersion = sub_dcfs[ndx][0]
+            DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc2']
+            DCF_submersion = dcfs_dicts_rads_list[rad]['max_dcf_sub_hc2']
             R = Rs[ndx]
             # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm
             SA = (np.log(2) * N_0)/(AW * t_half * 3.7E+10)
@@ -1068,8 +1705,10 @@ class HAZCAT():
             TQ_HC2s_curie.append(TQ_HC2_curie)
         return TQ_HC2s_curie, TQ_HC2s_gram 
     
-    def compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(self, Rs, aws, BVs, half_lives, E1s,
-                                                                    inh_dcfs, dcfs_ingestion, r_factor_hc3 = None,
+    def compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(self, Rs, aws, BVs,
+                                                                    half_lives, E1s,
+                                                                    dcfs_dicts_rads_list,
+                                                                    r_factor_hc3 = None,
                                                                     CHI_BY_Q = 7.2e-02):
         # NRC approach
         # HC-2: 1 rem (i.e. 10 mSv) at 100 m distance
@@ -1098,9 +1737,9 @@ class HAZCAT():
         for ndx, rad in enumerate(self.rads_list):
             AW = np.float32(aws[ndx])
             t_half = half_lives[ndx]
-            DCF_inhalation = inh_dcfs[ndx]
+            DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc3']
             # DCF_submersion = sub_dcfs[ndx][0]
-            DCF_ingestion = dcfs_ingestion[ndx]
+            DCF_ingestion = dcfs_dicts_rads_list[rad]['max_dcf_ing_hc3']
             R = Rs[ndx]
             E1 = E1s[ndx]
             # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm

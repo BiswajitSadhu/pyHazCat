@@ -66,7 +66,7 @@ def get_float_list(RF_HC2_list_text):
             pass  # Ignore invalid elements
     return float_list
 
-def print_hazcat_output(rads_list, half_lives, inh_dcfs_public_hc2, inh_dcfs_worker_hc3, sub_dcfs, dcfs_ingestion, aws, Rs_HC2, 
+def print_hazcat_output(rads_list, half_lives, dcfs_dicts_rads_list, aws, Rs_HC2,
                         Rs_HC3, BVs, E1s, tq_hc2s, TQ_HC2s_gram,
                                                   tq_hc3, TQ_HC3s_gram, dominant_pathway_text_list_hc3):
     """
@@ -94,10 +94,10 @@ def print_hazcat_output(rads_list, half_lives, inh_dcfs_public_hc2, inh_dcfs_wor
         isotope = rads_list[i]
         output_text += f"Radionuclide: {isotope}\n"
         output_text += f"  Half life (second): {half_lives[i]}\n"
-        output_text += f"  Inhalation dose conversion factor (Public) (Sv/Bq): {inh_dcfs_public_hc2[i]}\n"
-        output_text += f"  Inhalation dose conversion factor (Worker) (Sv/Bq): {inh_dcfs_worker_hc3[i]}\n"
-        output_text += f"  Air Submersion Dose Coefficient (Sv/sec per Bq/m3) (progeny ignored DCFs are in bracket): {sub_dcfs[i]}\n"
-        output_text += f"  Ingestion dose coefficient [Sv/Bq]: {dcfs_ingestion[i]}\n"     
+        output_text += f"  HC2: Inhalation dose conversion factor (Public) (Sv/Bq): {dcfs_dicts_rads_list[isotope]['max_dcf_inh_hc2']}\n"
+        output_text += f"  HC3: Inhalation dose conversion factor (Worker) (Sv/Bq): {dcfs_dicts_rads_list[isotope]['max_dcf_inh_hc3']}\n"
+        output_text += f"  HC2: Air Submersion Dose Coefficient (Sv/sec per Bq/m3): {dcfs_dicts_rads_list[isotope]['max_dcf_sub_hc2']}\n"
+        output_text += f"  HC3: Ingestion dose coefficient [Sv/Bq]: {dcfs_dicts_rads_list[isotope]['max_dcf_ing_hc3']}\n"
         output_text += f"  Atomic Weight: {aws[i]}\n"
         output_text += f"  Release fraction for computing Threshold for HC2: {Rs_HC2[i]}\n"
         output_text += f"  Release fraction for computing Threshold for HC3: {Rs_HC3[i]}\n"
@@ -360,12 +360,19 @@ def calculate_hazcat():
     # NOW USES ICRP 103 RADIONUCLIDE DATA
     half_lives = hazcat.halflives_lambda_rads_from_rads_list()[0]
     print('half_lives:', half_lives)
+
+    #####################
+    dcfs_dicts_rads_list = hazcat.get_dcfs_for_radionuclides()
+
+    print(dcfs_dicts_rads_list)
+
+    ####################
     # half_lives = hazcat.find_half_life_and_decay_const_radionuclides()[0]
     # half_lives = np.array(half_lives)
-    inh_dcfs_public_hc2 = hazcat.inhalation_dcf_list()
-    inh_dcfs_worker_hc3 = hazcat.inhalation_dcf_list_worker()
+    #inh_dcfs_public_hc2 = hazcat.inhalation_dcf_list()
+    # inh_dcfs_worker_hc3 = hazcat.inhalation_dcf_list_worker()
     # THIS IS FOR HC2 only (FGR 15), in HC3, submersion is only for inert gas.
-    sub_dcfs = hazcat.dcf_list_ecerman_submersion_include_progeny()
+    # sub_dcfs = hazcat.dcf_list_ecerman_submersion_include_progeny()
     aws = hazcat.find_aws()
 
     if Rs_HC2 is None:
@@ -388,7 +395,7 @@ def calculate_hazcat():
 
     BVs = hazcat.get_bv()
     # dcfs_ingestion = hazcat.dcf_list_ingestion()
-    dcfs_ingestion = hazcat.ingestion_dcf_list_worker()
+    # dcfs_ingestion = hazcat.ingestion_dcf_list_worker()
     # gamma = hazcat.gamma_energy_abundaces()
     # E1s = hazcat.get_E1(gamma)
     E1s = hazcat.get_E1_from_TableA1_ICRP_107()
@@ -398,12 +405,13 @@ def calculate_hazcat():
     # print('half_lives:::', half_lives)
     
     # COMPUTE TQ-HC2 with HazCat code
-    tq_hc2s, TQ_HC2s_gram = hazcat.compute_threshold_quantity_HC2_in_gram_and_curie(Rs_HC2, aws, half_lives, 
-                                                                                    inh_dcfs_public_hc2, sub_dcfs)
+    tq_hc2s, TQ_HC2s_gram = hazcat.compute_threshold_quantity_HC2_in_gram_and_curie(Rs_HC2, aws,
+                                                                                    half_lives,
+                                                                                    dcfs_dicts_rads_list)
     # COMPUTE TQ-HC3 with HazCat code
     tq_hc3, TQ_HC3s_gram, dominant_pathway_text_list_hc3 = hazcat.compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(Rs_HC3, aws, 
                                                                        BVs, half_lives, 
-                                                                       E1s, inh_dcfs_worker_hc3, dcfs_ingestion, r_factor_hc3 = r_factor_hc3,
+                                                                       E1s, dcfs_dicts_rads_list, r_factor_hc3 = r_factor_hc3,
                                                                        CHI_BY_Q = 7.2e-02)
     
     
@@ -428,8 +436,7 @@ def calculate_hazcat():
             short_notes.append(short_note)
         
         #######################################################
-        out_all = print_hazcat_output(rads_list, half_lives, inh_dcfs_public_hc2, inh_dcfs_worker_hc3, sub_dcfs, 
-                                      dcfs_ingestion, aws, Rs_HC2, Rs_HC3, BVs, E1s, tq_hc2s, TQ_HC2s_gram,
+        out_all = print_hazcat_output(rads_list, half_lives, dcfs_dicts_rads_list, aws, Rs_HC2, Rs_HC3, BVs, E1s, tq_hc2s, TQ_HC2s_gram,
                                                   tq_hc3, TQ_HC3s_gram, dominant_pathway_text_list_hc3)
     
         output_file.write(out_all)

@@ -613,6 +613,7 @@ class HAZCAT():
         merged_df_inh_hc2 = self.merge_dataframes_with_source_hc2(
             Table_7_JAERI_DATA_CODE_2002_013=result_tab7,
             Table_5_JAERI_DATA_CODE_2002_013=result_tab5,
+            Table_A2_DOE_STD_1196_2011=result_tab_a2,
             Annex_G_ICRP_119=result_annexg,
             Annex_H_ICRP_119=result_annexh
         )
@@ -631,10 +632,22 @@ class HAZCAT():
 
         merged_df_ing_hc3 = self.merge_dataframes_with_source_hc3(
             Annex_A_ICRP_119=result_annexa,
-            Annex_B_ICRP_119=result_annexb,
-            Table_6_JAERI_DATA_CODE_2002_013=result_tab6
+            Table_3_JAERI_DATA_CODE_2002_013=result_tab3
         )
+        # print(merged_df_inh_hc2)
+        fields = [
+            (merged_df_inh_hc2, "inh_adult"),
+            (merged_df_sub_hc2, "sub_adult"),
+            (merged_df_inh_hc3, "inh_adult_1mu_m"),
+            (merged_df_ing_hc3, "ing_adult"),
+        ]
 
+        max_dcf_inh_hc2, max_dcf_sub_hc2, max_dcf_inh_hc3, max_dcf_ing_hc3 = [
+            self.filter_max_value_by_reference(df, radionuclide, "Nuclide", col, "Reference") if isinstance(df,
+                                                                                                       pd.DataFrame) else np.nan
+            for df, col in fields
+        ]
+        '''
         # Get max DCF values
         max_dcf_inh_hc2 = self.filter_max_value_by_reference(merged_df_inh_hc2, radionuclide, "Nuclide", "inh_adult",
                                                         "Reference")
@@ -644,7 +657,7 @@ class HAZCAT():
                                                         "Reference")
         max_dcf_ing_hc3 = self.filter_max_value_by_reference(merged_df_ing_hc3, radionuclide, "Nuclide", "ing_adult",
                                                         "Reference")
-
+        '''
         dict_dcf['max_dcf_inh_hc2'] = max_dcf_inh_hc2
         dict_dcf['max_dcf_sub_hc2'] = max_dcf_sub_hc2
         dict_dcf['max_dcf_inh_hc3'] = max_dcf_inh_hc3

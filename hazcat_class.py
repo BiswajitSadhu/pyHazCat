@@ -1,10 +1,12 @@
 import numpy as np
 import os
 import pandas as pd
+
 os.getcwd()
 import logging
 
 pd.reset_option('display.float_format')
+
 
 class HAZCAT():
     def __init__(self, config):
@@ -29,10 +31,10 @@ class HAZCAT():
         return {rad: self.compute_max_dcf(rad) for rad in self.rads_list}
 
         # Example usage:
-        #rads_list = ['Cs-137', 'Co-60', 'Sr-90']
-        #dcfs_dicts_rads_list = get_dcfs_for_radionuclides(rads_list)
+        # rads_list = ['Cs-137', 'Co-60', 'Sr-90']
+        # dcfs_dicts_rads_list = get_dcfs_for_radionuclides(rads_list)
 
-        #print(dcfs_dicts_rads_list)
+        # print(dcfs_dicts_rads_list)
 
     def screen_Annex_G_ICRP119_dcf_inh_public_for_radionuclide(self, file_path, radionuclide):
         """
@@ -450,7 +452,6 @@ class HAZCAT():
         except Exception as e:
             return f"Error: {e}"
 
-
     def merge_dataframes_with_source_hc2(self, **dfs):
         """
         Merges multiple DataFrames while adding a column to specify their source.
@@ -644,7 +645,7 @@ class HAZCAT():
 
         max_dcf_inh_hc2, max_dcf_sub_hc2, max_dcf_inh_hc3, max_dcf_ing_hc3 = [
             self.filter_max_value_by_reference(df, radionuclide, "Nuclide", col, "Reference") if isinstance(df,
-                                                                                                       pd.DataFrame) else np.nan
+                                                                                                            pd.DataFrame) else np.nan
             for df, col in fields
         ]
         '''
@@ -665,6 +666,56 @@ class HAZCAT():
 
         return dict_dcf
 
+    # Define function to get atomic mass from CSV
+    def get_atomic_mass(self, nuclide_name, csv_file_path='library/MASS/massround_data_final.csv'):
+        """
+        Reads a CSV file and returns the atomic mass for a given nuclide.
+
+        Parameters:
+            csv_file_path (str): Path to the CSV file.
+            nuclide_name (str): Nuclide identifier (e.g., "Cs-137").
+
+        Returns:
+            str: Atomic mass of the nuclide, or None if not found.
+        """
+        try:
+            # Load the CSV file
+            df = pd.read_csv(csv_file_path)
+
+            if len(nuclide_name.split('m')) > 1:
+                nuclide_name = nuclide_name.split('m')[0]
+            else:
+                nuclide_name = nuclide_name
+
+            # Ensure 'Nuclide' and 'Atomic Mass' columns exist
+            if "Nuclide" not in df.columns or "Atomic Mass" not in df.columns:
+                raise ValueError("CSV file does not contain required columns.")
+
+            # Search for the nuclide
+            result = df.loc[df["Nuclide"] == nuclide_name, "Atomic Mass"]
+
+            atomic_mass = result.iloc[0]
+            if len(atomic_mass.split('.')) > 2:
+                am = float(atomic_mass.split('.')[0] + '.' + atomic_mass.split('.')[1])
+                # print(am)
+            else:
+                am = float(atomic_mass)
+
+            # Return the atomic mass if found
+            return am
+
+        except Exception as e:
+            return str(e)
+
+    def find_aws(self):
+        # rads_list = ['Ir-192', 'Co-60']
+        AWS = []
+        for rad in self.rads_list:
+            am = self.get_atomic_mass(rad)
+            AWS.append(np.float32(am))
+        return AWS
+
+    '''
     def find_aws(self):
         xls = pd.ExcelFile("library/AWS.xls")
         df_tq = pd.read_excel(xls)
@@ -680,7 +731,8 @@ class HAZCAT():
                 raise ValueError(f"Information on atomic weight for %s is not available"%rad)
             AWS.append(np.float32(val))
         return AWS
-    
+    '''
+
     def get_bv(self):
         xls = pd.ExcelFile("library/doe_haz_cat_excel.xlsx")
         df_tq = pd.read_excel(xls, sheet_name='r_bv')
@@ -702,7 +754,7 @@ class HAZCAT():
             val = df_tq[df_tq['Symbol'] == rad]['Release Fraction (R)'].item()
             R.append(val)
         return R
-    
+
     def get_R_HC2(self):
         Rs = []
         for rad in self.rads_list:
@@ -720,6 +772,7 @@ class HAZCAT():
                 R = 1e-03
                 Rs.append(R)
         return Rs
+
     '''
     def convert_half_life_to_seconds(self, half_life):
         units = {"ls": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600, "d": 86400, "y": 31536000}
@@ -873,7 +926,7 @@ class HAZCAT():
         self.list_half_life = list_half_life
 
         return self.list_half_life, self.lambda_of_rads
-    
+
     def inhalation_dcf_list(self, master_file='library/RadioToxicityMaster.xls',
                             sheet_name='Inhalation CED Sv per Bq Public',
                             age=18):
@@ -900,7 +953,7 @@ class HAZCAT():
         dcfs = []
 
         for ndx, rad in enumerate(self.rads_list):
-            
+
             search_string = '|'.join([rad])
             df = name[name['Nuclide'] == search_string]
             # consider all types: F, M, S and take the max value as dcf
@@ -925,9 +978,9 @@ class HAZCAT():
 
         self.inhalation_dcf = np.array(dcfs)
         return self.inhalation_dcf
-    
+
     def inhalation_dcf_list_worker(self, master_file='library/worker_icrp119.xlsx',
-                            sheet_name='Sheet1'):
+                                   sheet_name='Sheet1'):
         """
         Return Dose conversion Factors (Inhalation) specific to age and radionuclide.
 
@@ -953,7 +1006,6 @@ class HAZCAT():
         dcfs = []
 
         for ndx, rad in enumerate(self.rads_list):
-            
             search_string = '|'.join([rad])
             df = name[name['nuclide'] == search_string]
             # consider all types: F, M, S and take the max value as dcf
@@ -965,9 +1017,9 @@ class HAZCAT():
 
         inhalation_dcf = np.array(dcfs)
         return inhalation_dcf
-    
+
     def ingestion_dcf_list_worker(self, master_file='library/worker_icrp119.xlsx',
-                        sheet_name='Sheet1'):
+                                  sheet_name='Sheet1'):
         """
         Return Dose conversion Factors (ingestion) specific to age and radionuclide.
 
@@ -993,7 +1045,6 @@ class HAZCAT():
         dcfs = []
 
         for ndx, rad in enumerate(self.rads_list):
-
             search_string = '|'.join([rad])
             df = name[name['nuclide'] == search_string]
             # consider all types: F, M, S and take the max value as dcf
@@ -1004,7 +1055,7 @@ class HAZCAT():
 
         ingestion_dcf = np.array(dcfs)
         return ingestion_dcf
-    
+
     def find_progeny_name_and_yield_f(self, rad, master_file="library/dcf_corr.xlsx"):
         """
             Return the names and fractional yields of progeny radionuclides for a given radionuclide.
@@ -1189,7 +1240,7 @@ class HAZCAT():
                 dcf = df['Newborn'].max()
             else:
                 raise ValueError('The age of recipient must be a number.')
-            
+
             dcf_corr = dcf
             if consider_progeny:
                 daughter_list, frac_yield = self.find_progeny_name_and_yield_f(rad, master_file="library/dcf_corr.xlsx")
@@ -1369,7 +1420,7 @@ class HAZCAT():
                 t = tuple([i, j])
                 dcfs_combo.append(t)
             return dcfs_combo
-        
+
     def dcf_list_ingestion(self, master_file="library/Dose_ecerman_final.xlsx", sheet_name="ingestion_gsr3", age=18):
         """
         Return Dose Conversion Factors (Ingestion) specific to age and radionuclide.
@@ -1444,10 +1495,10 @@ class HAZCAT():
         df_tq.dropna(axis=0, how='all', inplace=True)
         search_string = '|'.join([str(rad)])
         df_tq = df_tq[df_tq['Radionuclide'] == search_string]
-        return df_tq 
-    
+        return df_tq
+
     def sum_of_ratio(self):
-        
+
         if len(self.rads_list) > 1:
             sor_hc2 = 0
             sor_hc3 = 0
@@ -1459,9 +1510,9 @@ class HAZCAT():
                 df_tq = pd.read_excel(xls, sheet_name='thresholds')
                 df_tq.dropna(axis=0, how='all', inplace=True)
                 search_string = '|'.join([str(rad)])
-                df_tq = df_tq[df_tq['Radionuclide'] == search_string] 
-                sor_hc2 += inv/df_tq.HC2_Curies.item()
-                sor_hc3 += inv/df_tq.HC3_Curies.item()
+                df_tq = df_tq[df_tq['Radionuclide'] == search_string]
+                sor_hc2 += inv / df_tq.HC2_Curies.item()
+                sor_hc3 += inv / df_tq.HC3_Curies.item()
             if sor_hc2 > 1:
                 print("Based on Sum of Ratio Method The facility is categorized as HC-2")
                 text += '\n'
@@ -1479,9 +1530,9 @@ class HAZCAT():
                 text += "Based on Sum of Ratio Method The facility is categorized as BELOW HC-3"
 
             return sor_hc2, sor_hc3, text
- 
+
     def sum_of_ratio_hazcat(self, HC2_Curies, HC3_Curies):
-        
+
         if len(self.rads_list) > 1:
             sor_hc2 = 0
             sor_hc3 = 0
@@ -1489,8 +1540,8 @@ class HAZCAT():
             # DOE STANDARD HAZARD CATEGORIZATION OF DOE NUCLEAR FACILITIES; 
             text += '\n\nUsing HazCat Computed TQ:\n'
             for ndx, (inv, rad) in enumerate(zip(self.inventories, self.rads_list)):
-                sor_hc2 += inv/HC2_Curies[ndx]
-                sor_hc3 += inv/HC3_Curies[ndx]
+                sor_hc2 += inv / HC2_Curies[ndx]
+                sor_hc3 += inv / HC3_Curies[ndx]
             if sor_hc2 > 1:
                 print("Based on Sum of Ratio Method The facility is categorized as HC-2.")
                 text += '\n'
@@ -1508,13 +1559,11 @@ class HAZCAT():
                 text += "Based on Sum of Ratio Method The facility is categorized as BELOW HC-3."
 
             return sor_hc2, sor_hc3, text
-   
-        
-    
+
     # On-site consequence analysis
-    def point_source_dose(self, gamma_energy =  None,g_yield =  None, activity_curie = None,\
-                               dist_list = [10, 20, 40, 50, 100, 200, 400, 600, 800, 1000], \
-                               exposed_fraction=[1,1e-03, 5e-04, 1e-05], unit='mSv/hr'):
+    def point_source_dose(self, gamma_energy=None, g_yield=None, activity_curie=None, \
+                          dist_list=[10, 20, 40, 50, 100, 200, 400, 600, 800, 1000], \
+                          exposed_fraction=[1, 1e-03, 5e-04, 1e-05], unit='mSv/hr'):
 
         """
         gamma_energy: in MeV unit
@@ -1532,44 +1581,45 @@ class HAZCAT():
             raise ValueError("Total acitivity of the radionuclide (in curie) is not provided.")
 
         if exposed_fraction == None:
-            raise ValueError("Please mention the exposed fractions (for multiple scenario) of the inventory in array format")
+            raise ValueError(
+                "Please mention the exposed fractions (for multiple scenario) of the inventory in array format")
 
         dose_dict = {}
         for ef in exposed_fraction:
 
             if unit == 'mSv/hr':
                 for distance in dist_list:
-                    dose = 0 
+                    dose = 0
                     for ge, y in zip(gamma_energy, g_yield):
                         # unit mSv/hr
                         distance_feet = distance * 3.28084
-                        dose += (1000 * (1/114) * (6 * y  * activity_curie * ge)/(distance_feet**2)) 
+                        dose += (1000 * (1 / 114) * (6 * y * activity_curie * ge) / (distance_feet ** 2))
                         # dose += 1000 * (0.01 * 0.53 * y  * activity_curie * ge)/(distance**2) 
-                    dose_after_dr_Corr = dose * ef 
+                    dose_after_dr_Corr = dose * ef
                     if distance not in dose_dict:
                         dose_dict[distance] = []
-                    #dose_after_dr_Corr = round(dose_after_dr_Corr, 5)
-                    dose_dict[distance].append(dose_after_dr_Corr) 
+                    # dose_after_dr_Corr = round(dose_after_dr_Corr, 5)
+                    dose_dict[distance].append(dose_after_dr_Corr)
 
             if unit == 'mR/hr':
                 for distance in dist_list:
                     distance_feet = distance * 3.28084
-                    dose = 0 
+                    dose = 0
                     for ge, y in zip(gamma_energy, g_yield):
                         # unit mSv/hr
-                        dose += (1000 * (6 * y  * activity_curie * ge)/(distance_feet**2)) 
+                        dose += (1000 * (6 * y * activity_curie * ge) / (distance_feet ** 2))
                         # dose += 1000 * (0.53 * y  * activity_curie * ge)/(distance**2) 
                     dose_after_dr_Corr = dose * ef
                     if distance not in dose_dict:
                         dose_dict[distance] = []
-                    #dose_after_dr_Corr = round(dose_after_dr_Corr, 5)
-                    dose_dict[distance].append(dose_after_dr_Corr) 
+                    # dose_after_dr_Corr = round(dose_after_dr_Corr, 5)
+                    dose_dict[distance].append(dose_after_dr_Corr)
 
         df_dose = pd.DataFrame([dose_dict])
         return dose_dict, df_dose
 
     def gamma_energy_abundaces(self, master_file="library/Dose_ecerman_final.xlsx",
-                           sheet_name="gamma_energy_radionuclide"):
+                               sheet_name="gamma_energy_radionuclide"):
 
         """
         taken from following database:
@@ -1581,14 +1631,13 @@ class HAZCAT():
         """
         if self.rads_list == None:
             raise ValueError("radionuclide name is missing. Please provide it in array format e.g. ['Ir-192']")
-        
-        
+
         logging.getLogger("main").info("Data source of gamma energy and abundances: {weblk}".format(
             weblk="www-nds.iaea.org/xgamma_standards/genergies1.htm"))
         xls = pd.ExcelFile(master_file)
         colnames = ['nuclide', 'energy_kev', 'std_energy_kev', 'emmission_prob', 'std_emmission_prob', 'type']
         name = pd.read_excel("library/Dose_ecerman_final.xlsx",
-                           sheet_name="gamma_energy_radionuclide", header=0, names= colnames)
+                             sheet_name="gamma_energy_radionuclide", header=0, names=colnames)
         name.dropna(axis=0, how='all', inplace=True)
         name = name.iloc[:, :-1]
         energies = []
@@ -1604,12 +1653,14 @@ class HAZCAT():
             if df.empty:
                 emmission_prob_per_rad = [0]
                 energies_per_rad = [0]
-                print("gamma energy not available for {}. This either means the radionuclide is pure-beta emitter or " 
-                      "the data of gamma energy not available in the current database (ref: www-nds.iaea.org/xgamma_standards/genergies1.htm)".format(rad))
-
-                logging.getLogger("gamma energies").info("gamma energy not available for {}. This either means the radionuclide is pure-beta emitter or " 
+                print("gamma energy not available for {}. This either means the radionuclide is pure-beta emitter or "
                       "the data of gamma energy not available in the current database (ref: www-nds.iaea.org/xgamma_standards/genergies1.htm)".format(
                     rad))
+
+                logging.getLogger("gamma energies").info(
+                    "gamma energy not available for {}. This either means the radionuclide is pure-beta emitter or "
+                    "the data of gamma energy not available in the current database (ref: www-nds.iaea.org/xgamma_standards/genergies1.htm)".format(
+                        rad))
 
             df_e = df['energy_kev'].items()
             df_p = df['emmission_prob'].items()
@@ -1625,9 +1676,9 @@ class HAZCAT():
                     en_dict[content_e / 1000] = content_p
 
                 # converted to MeV unit
-                #energies_per_rad.append(content_e / 1000)
-                #emmission_prob_per_rad.append(content_p)
-                #en_dict[content_e / 1000] = content_p
+                # energies_per_rad.append(content_e / 1000)
+                # emmission_prob_per_rad.append(content_p)
+                # en_dict[content_e / 1000] = content_p
             all_dicts_lst.append(en_dict)
             energies.append(energies_per_rad)
             emmission_prob.append(emmission_prob_per_rad)
@@ -1663,11 +1714,11 @@ class HAZCAT():
 
         # print('E1s', E1s)
         return E1s
-    
+
     def compute_threshold_quantity_HC2_in_gram_and_curie(self,
                                                          Rs, aws, half_lives,
                                                          dcfs_dicts_rads_list,
-                                                         CHI_BY_Q = 1e-04):
+                                                         CHI_BY_Q=1e-04):
         # NRC approach
         # HC-2: 1 rem (i.e. 10 mSv) at 100 m distance
         # Q = Quantity of material used as threshold (grams)
@@ -1702,27 +1753,35 @@ class HAZCAT():
             DCF_submersion = dcfs_dicts_rads_list[rad]['max_dcf_sub_hc2']
             R = Rs[ndx]
             # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm
-            SA = (np.log(2) * N_0)/(AW * t_half * 3.7E+10)
-            print("DCF_inhalationsss:", DCF_inhalation)
+            SA = (np.log(2) * N_0) / (AW * t_half * 3.7E+10)
+            # print("DCF_inhalationsss:", DCF_inhalation)
             if np.isnan(DCF_inhalation):
                 print(f"WARNING: Inhalation DCF not found for {rad} during HC2 TQ calculation".format(rad))
                 DCF_inhalation = 0
 
+            if np.isnan(DCF_submersion):
+                print(f"WARNING: Submersion DCF not found for {rad} during HC2 TQ calculation".format(rad))
+                DCF_submersion = 0
+
+            # if np.isnan(DCF_submersion):
+            #    print(f"WARNING: Submersion DCF not found for {rad} during HC2 TQ calculation".format(rad))
+            #    DCF_submersion = 0
+
             # gm 
-            TQ_HC2 = np.array(1/(R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)))
+            TQ_HC2 = np.array(1 / (R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)))
             # unit conversion factor
-            factor = (0.01/3.7e10) 
+            factor = (0.01 / 3.7e10)
             TQ_HC2_gram = TQ_HC2 * factor
             TQ_HC2_curie = TQ_HC2_gram * SA
             TQ_HC2s_gram.append(TQ_HC2_gram)
             TQ_HC2s_curie.append(TQ_HC2_curie)
-        return TQ_HC2s_curie, TQ_HC2s_gram 
-    
+        return TQ_HC2s_curie, TQ_HC2s_gram
+
     def compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(self, Rs, aws, BVs,
                                                                     half_lives, E1s,
                                                                     dcfs_dicts_rads_list,
-                                                                    r_factor_hc3 = None,
-                                                                    CHI_BY_Q = 7.2e-02):
+                                                                    r_factor_hc3=None,
+                                                                    CHI_BY_Q=7.2e-02):
         # NRC approach
         # HC-2: 1 rem (i.e. 10 mSv) at 100 m distance
         # Q = Quantity of material used as threshold (grams)
@@ -1748,88 +1807,185 @@ class HAZCAT():
         TQ_HC3s_gram = []
         dominant_pathway_text_list = []
         for ndx, rad in enumerate(self.rads_list):
+            print('rad under computation:', rad)
             AW = np.float32(aws[ndx])
             t_half = half_lives[ndx]
             DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc3']
             # DCF_submersion = sub_dcfs[ndx][0]
             DCF_ingestion = dcfs_dicts_rads_list[rad]['max_dcf_ing_hc3']
+
             R = Rs[ndx]
+            print("RRRRR:", R, DCF_ingestion, DCF_inhalation)
             E1 = E1s[ndx]
             # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm
-            SA = (np.log(2) * N_0)/(AW * t_half * 3.7E+10)
-            
-            #inhalation only
-            # gm 
-            iTQ_HC3 = np.array(10/(R * SA * CHI_BY_Q * DCF_inhalation * BR))
-            # unit conversion factor
-            factor = (0.01/3.7e10) 
-            iTQ_HC3_gram = iTQ_HC3 * factor
-            iTQ_HC3_curie = iTQ_HC3_gram * SA
-                               
+            SA = (np.log(2) * N_0) / (AW * t_half * 3.7E+10)
+            factor = (0.01 / 3.7e10)
+
+            # Ensure R is a single value (if it's a list)
+            if isinstance(R, list) and len(R) > 0:
+                R = R[0]  # Extract the first element
+
+            # Convert R to a float (only if it's not "--")
+            try:
+                R = float(R) if str(R).strip() != "--" else np.nan
+            except ValueError:
+                print(f"Error: R='{R}' is not a valid number.")
+                R = np.nan  # Default to NaN if conversion fails
+
+            if not np.isnan(R) and type(DCF_inhalation) == float:
+                try:
+                    iTQ_HC3 = np.array(10 / (R * SA * CHI_BY_Q * DCF_inhalation * BR))
+                    iTQ_HC3_gram = iTQ_HC3 * factor
+                    iTQ_HC3_curie = iTQ_HC3_gram * SA
+                except ZeroDivisionError:
+                    print("Error: Division by zero in iTQ_HC3 calculation.")
+                    iTQ_HC3_gram = np.inf
+                    iTQ_HC3_curie = np.inf
+            else:
+                print(f"NOTE: R or inhalation DCF data not available for {rad}")
+                iTQ_HC3_gram = np.inf
+                iTQ_HC3_curie = np.inf
+            '''
+            if not np.isnan(R):
+                iTQ_HC3 = np.array(10 / (R * SA * CHI_BY_Q * DCF_inhalation * BR))
+                # unit conversion factor
+                iTQ_HC3_gram = iTQ_HC3 * factor
+                iTQ_HC3_curie = iTQ_HC3_gram * SA
+            else:
+                iTQ_HC3_gram = np.inf
+                iTQ_HC3_curie = np.inf
+            '''
             # TQHC3,food = Food ingestion pathway threshold quantity [Ci];
-            # DF = Dilution factor accounting for the transfer of radionuclides from air to
-            # vegetation (Ci/kg of vegetables at the point of exposure per curies released
-            # to the atmosphere, [kg-1 ]);
-            # BV = Concentration ratio for the transfer of the element to the edible portion of a
-            # crop from dry soil (dimensionless)
-            B_v = BVs[ndx]
-            DF = 1e-04 + (3.5e-06 * B_v)
+
             # FC = Food (i.e., leafy vegetable) consumption rate of reference man [0.175
             # kg/day];
-            FC = 0.175 
+            FC = 0.175
             # CT = Contact Time (effective time over which contaminated vegetables are
             # ingested [days];
             # λI = Radionuclide decay constant [day-1 ] = ln(2)/t 1/2 ;
             # t 1/2 = Radionuclide half-life [days];
-            lambda_i = (86400 * np.log(2))/t_half
+            lambda_i = (86400 * np.log(2)) / t_half
             # λW = Weathering decay constant [day-1 ] = ln(2)/14 days; and
-            lambda_w = np.log(2)/14
+            lambda_w = np.log(2) / 14
             # t_g = Growing season time [60 days]
             t_g = 60
             # unit = days               
-            CT = (1-np.exp(-(lambda_i+lambda_w)*t_g))/(lambda_i+lambda_w)
+            CT = (1 - np.exp(-(lambda_i + lambda_w) * t_g)) / (lambda_i + lambda_w)
             # R = Release fraction [dimensionless]; and
             # DC ingest = Ingestion dose coefficient [Sv/Bq]
-            
-            # Food ingestion pathway
-            
-            fing_TQ_HC3 = np.array(10/(DF * FC * CT * R * DCF_ingestion))
-            # unit conversion factor
-            factor = (0.01/3.7e10) 
-            fing_TQ_HC3_curie = fing_TQ_HC3 * factor
-            fing_TQ_HC3_gram = fing_TQ_HC3_curie * SA
-                                       
+            B_v = BVs[ndx]
+
+            # Ensure B_v is a single value (not a list)
+            if isinstance(B_v, list) and len(B_v) > 0:
+                B_v = B_v[0]  # Extract the first element
+
+            # Convert B_v to float (only if it's not '--')
+            try:
+                B_v = float(B_v) if str(B_v).strip() != "--" else np.nan
+            except ValueError:
+                print(f"Error: B_v='{B_v}' is not a valid number.")
+                B_v = np.nan  # Default to NaN if conversion fails
+
+            if isinstance(R, list) and len(R) > 0:
+                print("R is a list, extracting first element.")
+                R = R[0]
+
+            # Convert to string and check conditions
+            print('B_v:', str(B_v).split(), 'R:', R)
+
+            # Corrected condition
+            if (str(R).strip() != "--" and not isinstance(R, str) and not np.isnan(R)) or \
+                    (str(B_v).strip() != "--" and not isinstance(B_v, str) and not np.isnan(B_v)) or \
+                    (not np.isnan(DCF_ingestion)):
+
+                # Food ingestion pathway calculation
+                if isinstance(DCF_ingestion, float):
+                    print('B_v:', B_v)
+                    DF = 1e-04 + (3.5e-06 * B_v)
+                    fing_TQ_HC3 = np.array(10 / (DF * FC * CT * R * DCF_ingestion))
+                    fing_TQ_HC3_curie = fing_TQ_HC3 * factor
+                    fing_TQ_HC3_gram = fing_TQ_HC3_curie * SA
+                else:
+                    fing_TQ_HC3_curie = np.inf
+                    fing_TQ_HC3_gram = np.inf
+            else:
+                print(f"NOTE: B_v data not available for {rad}")
+                fing_TQ_HC3_curie = np.inf
+                fing_TQ_HC3_gram = np.inf
+
+
+            '''
+            if isinstance(B_v, list) and len(B_v) > 0:
+                print("lisssstt")
+                B_v = B_v[0]  # Extract the first element
+            if isinstance(R, list) and len(R) > 0:
+                print("rrrrlisssstt")
+                R = R[0]  # Extract the first element
+            print('B_VVVVV:',str(B_v).split(), R)
+            if str(R).strip() != "--" or str(B_v).strip() != "--" \
+                    or R != np.nan or str(B_v).strip() != "--" \
+                    or B_v != np.nan or DCF_ingestion != np.nan:
+                # Food ingestion pathway (not applicable for carbon radionuclides)
+                if isinstance(DCF_ingestion, float):
+                    # DF = Dilution factor accounting for the transfer of radionuclides from air to
+                    # vegetation (Ci/kg of vegetables at the point of exposure per curies released
+                    # to the atmosphere, [kg-1 ]);
+                    # BV = Concentration ratio for the transfer of the element to the edible portion of a
+                    # crop from dry soil (dimensionless)
+                    print('B_v:', B_v)
+                    DF = 1e-04 + (3.5e-06 * B_v)
+                    fing_TQ_HC3 = np.array(10 / (DF * FC * CT * R * DCF_ingestion))
+                    fing_TQ_HC3_curie = fing_TQ_HC3 * factor
+                    fing_TQ_HC3_gram = fing_TQ_HC3_curie * SA
+                else:
+                    fing_TQ_HC3_curie = np.inf
+                    fing_TQ_HC3_gram = np.inf
+            else:
+                print(f"NOTE: B_v data not available for {rad}".format())
+                fing_TQ_HC3_curie = np.inf
+                fing_TQ_HC3_gram = np.inf
+                # unit conversion factor
+            # factor = (0.01/3.7e10)
+            # fing_TQ_HC3_curie = fing_TQ_HC3 * factor
+            # fing_TQ_HC3_gram = fing_TQ_HC3_curie * SA
+            '''
             # water ingestion pathway
             # CT contact time: 9 days
             contact_time = 9
-            ctfac = (1-np.exp(-lambda_i*contact_time))/lambda_i
+            ctfac = (1 - np.exp(-lambda_i * contact_time)) / lambda_i
             # water consumption for reference man 2 L/day
             WC = 2
             # Retardation factor (1 day)
             R_d = 1
             # DF; t_half in day
-            DF = 7.6e-8 * np.exp((-4.2*86400*R_d)/t_half)
-            wing_TQ_HC3 = np.array(10/(DF * ctfac * WC * DCF_ingestion))
-            # unit conversion factor
-            factor = (0.01/3.7e10) 
-            wing_TQ_HC3_curie = wing_TQ_HC3 * factor
-            wing_TQ_HC3_gram = wing_TQ_HC3_curie * SA
-                                       
+            DF = 7.6e-8 * np.exp((-4.2 * 86400 * R_d) / t_half)
+
+            if isinstance(DCF_ingestion, float):
+                wing_TQ_HC3 = np.array(10 / (DF * ctfac * WC * DCF_ingestion))
+                # unit conversion factor
+                factor = (0.01 / 3.7e10)
+                wing_TQ_HC3_curie = wing_TQ_HC3 * factor
+                wing_TQ_HC3_gram = wing_TQ_HC3_curie * SA
+            else:
+                print(f"WARNING: DCF for ingestion is not available for {rad}".format)
+                wing_TQ_HC3_curie = np.inf
+                wing_TQ_HC3_gram = np.inf
+
             ##### External Exposure #######
             # duration of exposure : 1 day
             exposure_time = 1
-            expofac = (1-np.exp(-lambda_i*exposure_time))/lambda_i
+            expofac = (1 - np.exp(-lambda_i * exposure_time)) / lambda_i
             # equation coefficient
             C_gamma = 6.41e-05
             # mu_a (cm-1) = Linear energy absorption coefficient for gamma rays in air
             mu_a = 3.7e-05
             # distance from point source in metre
             S = 30
-            numerator = (10*S**2* C_gamma)     
-            denominator = (E1 * mu_a * 24 * expofac * np.exp(-100*mu_a *S))                    
-            print('E1_:', E1, mu_a)
-            direct_expo_TQ_HC3 = (numerator/denominator)
-                                   
+            numerator = (10 * S ** 2 * C_gamma)
+            denominator = (E1 * mu_a * 24 * expofac * np.exp(-100 * mu_a * S))
+            # print('E1_:', E1, mu_a)
+            direct_expo_TQ_HC3 = (numerator / denominator)
+
             # air exposure: submersion dose
 
             def get_dcf_by_nuclide(nuclide_name):
@@ -1859,20 +2015,25 @@ class HAZCAT():
                 """
 
                 DCF_submersion = get_dcf_by_nuclide(rad)
-                CHI_BY_Q_hc3 = 7.2e-02
-                factor = (0.01 / 3.7e10)
-                denominator_sub = CHI_BY_Q_hc3 * float(DCF_submersion)
-                submersion_TQ_HC3_curie = (10 / denominator_sub) * factor
+                print('DCF_submersion:', DCF_submersion)
+
+                if not DCF_submersion:
+                    submersion_TQ_HC3_curie = np.inf
+                else:
+                    CHI_BY_Q_hc3 = 7.2e-02
+                    factor = (0.01 / 3.7e10)
+                    denominator_sub = CHI_BY_Q_hc3 * float(DCF_submersion)
+                    submersion_TQ_HC3_curie = (10 / denominator_sub) * factor
 
                 return submersion_TQ_HC3_curie
 
             # CONSOLIDATED list from ICRP 103, TABLE ANNEX C, AND JAERI-DATA/CODE-2002-013 TABLE 8
             inert_gas_lists = ['Ar-37', 'Ar-39', 'Ar-41', 'Kr-74', 'Kr-76', 'Kr-77', 'Kr-79',
                                'Kr-81', 'Kr-81m', 'Kr-83m', 'Kr-85', 'Kr-85m', 'Kr-87', 'Kr-88',
-                                'Xe-120', 'Xe-121', 'Xe-122', 'Xe-123', 'Xe-125', 'Xe-127', 'Xe-129m',
-                                'Xe-131m', 'Xe-133', 'Xe-133m', 'Xe-135', 'Xe-135m', 'Xe-138',
+                               'Xe-120', 'Xe-121', 'Xe-122', 'Xe-123', 'Xe-125', 'Xe-127', 'Xe-129m',
+                               'Xe-131m', 'Xe-133', 'Xe-133m', 'Xe-135', 'Xe-135m', 'Xe-138',
                                'N-13', 'O-14', 'O-15', 'Ar-42', 'Ar-44', 'Kr-75', 'Kr-89', 'Xe-127m',
-                                'Xe-137']
+                               'Xe-137']
 
             if rad in inert_gas_lists:
                 submersion_TQ_HC3_curie = compute_submersion_TQ_HC3(rad)
@@ -1890,7 +2051,7 @@ class HAZCAT():
             denominator_sub = CHI_BY_Q_hc3 * DCF_submersion
             submersion_TQ_HC3_curie = (10/denominator_sub) * factor
             '''
-                                   
+
             dominant_pathway_text = ''
 
             if np.isnan(iTQ_HC3_curie):
@@ -1904,37 +2065,37 @@ class HAZCAT():
             if np.isnan(submersion_TQ_HC3_curie):
                 submersion_TQ_HC3_curie = np.inf
 
-            stack_all_tq_hc3_curie = [iTQ_HC3_curie, fing_TQ_HC3_curie, 
-                                 wing_TQ_HC3_curie, direct_expo_TQ_HC3,
-                                  submersion_TQ_HC3_curie]
+            stack_all_tq_hc3_curie = [iTQ_HC3_curie, fing_TQ_HC3_curie,
+                                      wing_TQ_HC3_curie, direct_expo_TQ_HC3,
+                                      submersion_TQ_HC3_curie]
 
-            
-            #if r_factor_hc3 is not None:
+            # if r_factor_hc3 is not None:
             #    x = r_factor_hc3[ndx]
             #    stack_all_tq_hc3_curie = [x * i if ndx != 3 else i for ndx, i in enumerate(stack_all_tq_hc3_curie)]
-  
-            #else:
+
+            # else:
             #    stack_all_tq_hc3_curie = stack_all_tq_hc3_curie
-            
+
             # in gram
-            stack_all_tq_hc3_in_gram = stack_all_tq_hc3_curie/SA
+            stack_all_tq_hc3_in_gram = stack_all_tq_hc3_curie / SA
             pathways = ['  Inhalation', '  Food ingestion', '  Water ingestion',
-                       '  Direct exposure', '  Submersion']
+                        '  Direct exposure', '  Submersion']
             # print('Dominant pathway:', pathways[np.argmin(stack_all_dose_hc3)])
-            #dominant_pathway_text = 'TQ-HC3: '
+            # dominant_pathway_text = 'TQ-HC3: '
             dominant_pathway_text += '\n'
             for p, s in zip(pathways, stack_all_tq_hc3_curie):
-                dominant_pathway_text += '  ' + str(p) + ':' + ' ' + str(s) + ' Ci. ' 
+                dominant_pathway_text += '  ' + str(p) + ':' + ' ' + str(s) + ' Ci. '
                 dominant_pathway_text += '\n'
-            dominant_pathway_text += '  ' + 'Dominant Pathway (TQ HC-3):' + ' ' + str(pathways[np.argmin(stack_all_tq_hc3_curie)])
+            dominant_pathway_text += '  ' + 'Dominant Pathway (TQ HC-3):' + ' ' + str(
+                pathways[np.argmin(stack_all_tq_hc3_curie)])
             # if np.argmin(stack_all_tq_hc3_curie) == 3:
             dominant_pathway_text_list.append(dominant_pathway_text)
-            
+
             TQ_HC3s_curie.append(min(stack_all_tq_hc3_curie))
             TQ_HC3s_gram.append(min(stack_all_tq_hc3_in_gram))
-            
+
         return TQ_HC3s_curie, TQ_HC3s_gram, dominant_pathway_text_list
-    
+
     def write_hazcat_classification_and_dose(self, df_tq, inv, rad):
         """
         Writes HAZCAT classification and dose information to a file.
@@ -1946,9 +2107,10 @@ class HAZCAT():
           rad (str): Radionuclide name.
         """
         # f = self.f
-        
+
         text = ""
         short_note = ""
+
         def get_limiting_pathway_note(limiting_pathway):
             """
             Returns a note based on the limiting pathway code.
@@ -1960,15 +2122,15 @@ class HAZCAT():
               str: The note corresponding to the limiting pathway code.
             """
             notes = {
-              'C': "NOTE: At the recommendation of the Tritium Focus Group, the HC-2 and HC-3 tritium threshold "
-                  "values were provided by the Tritium Focus Group (TFG) and are not calculated using the "
-                  "methodology in this Standard.",
-              'E': "NOTE: The HC-3 TQ is set to be equal to the HC-2 TQ for the following nine radionuclides:"
-                  " Bi-212n, Po-213, Po-214, Po-216, Po-218, Rn-215, Rn-216, Rn-217, and U-235m.",
-              'Inhalation-D': "NOTE: To be used only if segmentation or the nature of the process precludes the potential for"
-                  " criticality. Otherwise, the “Single-Parameter Limits for Fissile Nuclides” in Section 5 of"
-                  " ANSI/ANS-8.1-2014 are evaluated consistent with Section 3.1.6 of this Standard."
-                    }
+                'C': "NOTE: At the recommendation of the Tritium Focus Group, the HC-2 and HC-3 tritium threshold "
+                     "values were provided by the Tritium Focus Group (TFG) and are not calculated using the "
+                     "methodology in this Standard.",
+                'E': "NOTE: The HC-3 TQ is set to be equal to the HC-2 TQ for the following nine radionuclides:"
+                     " Bi-212n, Po-213, Po-214, Po-216, Po-218, Rn-215, Rn-216, Rn-217, and U-235m.",
+                'Inhalation-D': "NOTE: To be used only if segmentation or the nature of the process precludes the potential for"
+                                " criticality. Otherwise, the “Single-Parameter Limits for Fissile Nuclides” in Section 5 of"
+                                " ANSI/ANS-8.1-2014 are evaluated consistent with Section 3.1.6 of this Standard."
+            }
             return notes.get(limiting_pathway, "")  # Return empty string if code not found
 
         # Write notes about specific limiting pathways (if applicable)
@@ -1976,7 +2138,7 @@ class HAZCAT():
             text += get_limiting_pathway_note(df_tq.Limiting_Pathway.item()) + '\n'
 
             # f.write(get_limiting_pathway_note(df_tq.Limiting_Pathway.item()) + '\n')
-            
+
         # haz cat 2    
         if inv > df_tq.HC2_Curies.item():
             short_note += "HAZARD CATEGORY 2"
@@ -1996,18 +2158,18 @@ class HAZCAT():
             text += " and energy (i.e., greater than HC-2 TQs in Attachment 1), which"
             text += " would require on-site emergency planning activities.\n"
             text += "\n"
-            #f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
+            # f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
             #        " the case with {} belong to HAZARD CATEGORY 2".format(inv, rad))
-            #f.write('\n')
-            #f.write("Definition: Hazard Analysis shows the potential for significant on-site consequences.")
-            #f.write('\n')
-            #f.write("Interpretation: DOE nonreactor nuclear facilities with the potential for nuclear"
+            # f.write('\n')
+            # f.write("Definition: Hazard Analysis shows the potential for significant on-site consequences.")
+            # f.write('\n')
+            # f.write("Interpretation: DOE nonreactor nuclear facilities with the potential for nuclear"
             #        " criticality events or DOE nuclear facility, including Category B"
             #        " reactors, with sufficient quantities of hazardous radioactive material"
             #        " and energy (i.e., greater than HC-2 TQs in Attachment 1), which"
             #        " would require on-site emergency planning activities.") 
-            #f.write('\n')
-            
+            # f.write('\n')
+
         # below haz cat 3    
         if inv < df_tq.HC3_Curies.item():
             short_note += "BELOW HAZARD CATEGORY 3"
@@ -2016,7 +2178,7 @@ class HAZCAT():
             text += "\n"
             text += f"DOE-STD-1027-2018 TQ (HC2): {df_tq.HC2_Curies.item()} Ci \n"
             text += f"DOE-STD-1027-2018 TQ (HC3): {df_tq.HC3_Curies.item()} Ci \n"
-            
+
             text += "Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,".format(inv)
             text += " the case with {} belong to BELOW HAZARD CATEGORY 3\n".format(rad)
             text += "\n"
@@ -2029,17 +2191,16 @@ class HAZCAT():
             text += " These facilities are not required to comply with the requirements of 10"
             text += " CFR Part 830, Subpart B."
             text += "\n"
-            #f.write('\n')
-            #f.write("Interpretation: nonreactor nuclear facilities with quantities of hazardous"
+            # f.write('\n')
+            # f.write("Interpretation: nonreactor nuclear facilities with quantities of hazardous"
             #        " radioactive materials less than the HC-3 TQ values in Attachment 1."
             #        " These facilities are not required to comply with the requirements of 10"
             #        " CFR Part 830, Subpart B.")
 
-    
-            #f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
+            # f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
             #        " the case with {} belong to BELOW HAZARD CATEGORY 3".format(inv, rad))
-            #f.write('\n')
-            #f.write("Definition: A nuclear facility with radiological materials, but in quantities"
+            # f.write('\n')
+            # f.write("Definition: A nuclear facility with radiological materials, but in quantities"
             #        " determined as part of an initial or final hazard categorization to be less"
             #        " than Hazard Category 3 thresholds")
             # f.write('\n')
@@ -2051,7 +2212,7 @@ class HAZCAT():
         # haz cat 3    
         if df_tq.HC2_Curies.item() > inv > df_tq.HC3_Curies.item():
             short_note += "HAZARD CATEGORY 3"
-            
+
             text += "\n"
             text += "### TQs from look-up table of DOE-STD-1027-2018 document ###"
             text += "\n"
@@ -2066,12 +2227,12 @@ class HAZCAT():
             text += " radioactive materials which meet or exceed the HC-3 TQs in"
             text += " Attachment 1. (ref. US-DOE-std-1027-2018)"
 
-            #f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
+            # f.write("Based on US-DOE-std-1027-2018 based precomputed values and inventory = {} curie,"
             #        " the case with {} belong to HAZARD CATEGORY 3".format(inv, rad))
-            #f.write('\n')
-            #f.write("Definition: Hazard Analysis shows the potential for significant localized consequences.")
-            #f.write('\n')
-            #f.write("Interpretation: DOE nonreactor nuclear facilities with quantities of hazardous"
+            # f.write('\n')
+            # f.write("Definition: Hazard Analysis shows the potential for significant localized consequences.")
+            # f.write('\n')
+            # f.write("Interpretation: DOE nonreactor nuclear facilities with quantities of hazardous"
             #        " radioactive materials which meet or exceed the HC-3 TQs in"
             #        " Attachment 1. (ref. US-DOE-std-1027-2018)")
         text += "\n"
@@ -2080,26 +2241,21 @@ class HAZCAT():
         text += " submersion"
         text += "\n"
         text += "\n"
-        
+
         return text, short_note
-    
+
     def inventory_based_hazard_classification(self):
         if self.inventories == None:
-            raise ValueError("Please provide the radionuclide-wise inventory of the facility in array format." 
-                  " For ex. if two radionuclides are being handled with inventory A curie and B curie at the facility. "
-                  "Provide the inventory values of these radionuclides sequentially i.e. [A, B].")
+            raise ValueError("Please provide the radionuclide-wise inventory of the facility in array format."
+                             " For ex. if two radionuclides are being handled with inventory A curie and B curie at the facility. "
+                             "Provide the inventory values of these radionuclides sequentially i.e. [A, B].")
         if self.rads_list == None:
-            raise ValueError("Please provide the name of the radionuclides of the facility in array format." 
-                  " For ex. if two radionuclides are being handled with inventory H-3 and Co-60 at the facility. "
-                  "Provide the name of these radionuclides sequentially i.e. ['H-3', 'Co-60']")
+            raise ValueError("Please provide the name of the radionuclides of the facility in array format."
+                             " For ex. if two radionuclides are being handled with inventory H-3 and Co-60 at the facility. "
+                             "Provide the name of these radionuclides sequentially i.e. ['H-3', 'Co-60']")
 
         print("NOTE: The limiting exposure pathways used for determining the HC-3 threshold value are: (1)"
-                  " inhalation, (2) ingestion of food, (3) ingestion of water, (4) direct exposure, and (5) air"
-                  " submersion\n")
+              " inhalation, (2) ingestion of food, (3) ingestion of water, (4) direct exposure, and (5) air"
+              " submersion\n")
 
         return
-
-    
-
-
-

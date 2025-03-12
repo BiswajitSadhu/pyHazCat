@@ -5,6 +5,8 @@
 
 
 import tkinter as tk
+
+import numpy as np
 from hazcat_class import *
 from tkinter import ttk
 from tkinter import *
@@ -91,7 +93,7 @@ def print_hazcat_output(rads_list, half_lives, dcfs_dicts_rads_list, aws, Rs_HC2
       ValueError: If the lengths of any lists don't match.
     """
     output_text = ""
-    print('half_lives::::', half_lives)
+    # print('half_lives::::', half_lives)
     for i in range(len(rads_list)):
         isotope = rads_list[i]
         output_text += f"Radionuclide: {isotope}\n"
@@ -344,7 +346,20 @@ def calculate_hazcat():
     ack_text = f"{COPYRIGHT}\n\n{ACKNOWLEDGMENT}\n\n"
 
     user_config = get_user_input()
-    print('Configuration:', user_config) 
+    print('Configuration:', user_config)
+
+    # Assume user_config is obtained from get_user_input()
+    user_config = get_user_input()
+    print('Configuration:', user_config)
+
+    # Define output filename
+    output_json_filename = "your_input.json"
+
+    # Save as JSON
+    with open(output_json_filename, "w") as json_file:
+        json.dump(user_config, json_file, indent=4)
+
+    print(f"Configuration saved to {output_json_filename}")
     
     rads_list = user_config['rads_list']
     
@@ -361,12 +376,12 @@ def calculate_hazcat():
     hazcat = HAZCAT(user_config)
     # NOW USES ICRP 103 RADIONUCLIDE DATA
     half_lives = hazcat.halflives_lambda_rads_from_rads_list()[0]
-    print('half_lives:', half_lives)
+    # print('half_lives:', half_lives)
 
     #####################
     dcfs_dicts_rads_list = hazcat.get_dcfs_for_radionuclides()
 
-    print(dcfs_dicts_rads_list)
+    # print(dcfs_dicts_rads_list)
 
     ####################
     # half_lives = hazcat.find_half_life_and_decay_const_radionuclides()[0]
@@ -415,9 +430,7 @@ def calculate_hazcat():
                                                                        BVs, half_lives, 
                                                                        E1s, dcfs_dicts_rads_list, r_factor_hc3 = r_factor_hc3,
                                                                        CHI_BY_Q = 7.2e-02)
-    
-    
-    
+
     ######## US-DOE-TABLE BASED CLASSIFICATION ############
     with open(filename, "w") as output_file:      
         write_hazcat_logo(output_file)
@@ -427,11 +440,18 @@ def calculate_hazcat():
         short_notes = []
         doe_tqhc2_curies = []
         doe_tqhc3_curies = []
+        doe_pathway = []
+        doe_tqhc2_gms = []
+        doe_tqhc3_gms = []
         for odx, (inv, rad) in enumerate(zip(inventories, rads_list)):
             df_tq = hazcat.read_us_doe_std_1027_2018(rad)
+            best_pathway = df_tq.Limiting_Pathway.item()
+            doe_pathway.append(best_pathway)
             doe_tqhc2_curie, doe_tqhc2_gm, doe_tqhc3_curie, doe_tqhc3_gm = df_tq.HC2_Curies.item(), df_tq.HC2_Grams.item(), df_tq.HC3_Curies.item(),  df_tq.HC3_Grams.item()  
             doe_tqhc2_curies.append(doe_tqhc2_curie)
+            doe_tqhc2_gms.append(doe_tqhc2_gm)
             doe_tqhc3_curies.append(doe_tqhc3_curie)
+            doe_tqhc3_gms.append(doe_tqhc3_gm)
             # Perform hazard classification based on inventory and precomputed values
             notes, short_note = hazcat.write_hazcat_classification_and_dose(df_tq, inv, rad)
             output_file.write(notes)
@@ -446,15 +466,72 @@ def calculate_hazcat():
         ## SUM OF RATIO ###
         if len(rads_list) > 1:
             sorhc2, sorhc3, sortext = hazcat.sum_of_ratio()
-            print('DOE_SOR:', sorhc2, sorhc3, sortext)
+            # print('DOE_SOR:', sorhc2, sorhc3, sortext)
             output_file.write(sortext)
             sorhc2_hz, sorhc3_hz, sortext_hz = hazcat.sum_of_ratio_hazcat(tq_hc2s, tq_hc3)
-            print('HazCat_SOR:', sorhc2_hz, sorhc3_hz, sortext_hz)
+            # print('HazCat_SOR:', sorhc2_hz, sorhc3_hz, sortext_hz)
             output_file.write(sortext_hz)
         print(f"Results saved to: {filename}")
     
     # Example usage (assuming window is a Tk() instance):
-    
+    ### SAVE AS CSV ############################################
+    # Function to format values with DOE reference in parentheses
+    def format_with_doe(value, doe_value):
+        return f"{value:.4e} ({doe_value:.4e})"
+
+    # Function to extract pathway values
+    def extract_values(text):
+        pathways = {
+            "Inhalation": np.nan,
+            "Food ingestion": np.nan,
+            "Water ingestion": np.nan,
+            "Direct exposure": np.nan,
+            "Submersion": np.nan,
+            "Dominant Pathway": np.nan
+        }
+
+        matches = re.findall(r"(\w+(?: \w+)*): ([\d.e+-]+|inf) Ci", text)
+        for key, value in matches:
+            pathways[key] = np.nan if value == "inf" else float(value)
+
+        # Extract dominant pathway
+        dom_match = re.search(r"Dominant Pathway.*?:\s*(\w+)", text)
+        if dom_match:
+            pathways["Dominant Pathway"] = dom_match.group(1)
+
+        return pathways
+
+    # Extract values for all radionuclides
+    pathway_data = [extract_values(text) for text in dominant_pathway_text_list_hc3]
+
+    # Convert pathway data to DataFrame
+    df_pathways = pd.DataFrame(pathway_data)
+
+    # Add DOE pathway in parentheses
+    df_pathways["Dominant Pathway"] = [
+        f"{dom} ({doe})" for dom, doe in zip(df_pathways["Dominant Pathway"], doe_pathway)
+    ]
+
+    # Create main DataFrame with TQ values and Radionuclide column
+    df_main = pd.DataFrame({
+        "Radionuclide": rads_list,
+        "TQ HC-3 (Ci)": [format_with_doe(tq, doe) for tq, doe in zip(tq_hc3, doe_tqhc3_curies)],
+        "TQ HC-3 (Gram)": [format_with_doe(tq, doe) for tq, doe in zip(TQ_HC3s_gram, doe_tqhc3_gms)],
+        "TQ HC-2 (Ci)": [format_with_doe(tq, doe) for tq, doe in zip(tq_hc2s, doe_tqhc2_curies)],
+        "TQ HC-2 (Gram)": [format_with_doe(tq, doe) for tq, doe in zip(TQ_HC2s_gram, doe_tqhc2_gms)]
+    })
+
+    # Combine both DataFrames, ensuring Radionuclide and TQ values come first
+    df_final = pd.concat([df_main, df_pathways], axis=1)
+
+    # Save to CSV
+    output_filename = "hazcat_output.csv"
+    df_final.to_csv(output_filename, index=False)
+
+    print(f"Results saved to {output_filename}")
+
+
+    ############################################################
     if len(rads_list) > 1:
         display_results_with_scrollbar(window, rads_list, tq_hc2s, tq_hc3, short_notes, doe_tqhc2_curies, doe_tqhc3_curies, sortext=sortext, sortext_hz = sortext_hz)
         #display_results(window, rads_list, tq_hc2s, tq_hc3, short_notes, doe_tqhc2_curies, doe_tqhc3_curies, sortext=sortext, sortext_hz = sortext_hz)
@@ -499,12 +576,12 @@ def get_user_input():
         raise ValueError("Release fraction values (for HC3) must be provided "
                          "for all chosen radionculides, if mentioned for atleast one radionuclides.")
         
-    print('outfilename_dict:', output_filename, rf_list_hc2_val, rf_list_hc3_val)
+    # print('outfilename_dict:', output_filename, rf_list_hc2_val, rf_list_hc3_val)
     if inventories_text == "":
         print("Inventory list is empty. Please enter the inventory values.")
         return None
     
-    print('inventories_text:', inventories_text, inv_list_text)
+    # print('inventories_text:', inventories_text, inv_list_text)
     
     # Check Release fraction is provided by USER or not
     if rf_list_hc2_val == ['']:

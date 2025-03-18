@@ -57,8 +57,17 @@ class HAZCAT():
                           'inh_adult']
 
             if "Nuclide" in df.columns:
-                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
-                print('df_filtered:', df_filtered)
+                # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+
+                # df_filtered = df[
+                #    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                #        rf"^{radionuclide.upper()}|{radionuclide.upper()}", na=False)
+                # ]
+
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
                 return df_filtered if not df_filtered.empty else "No data found"
             else:
                 return "No 'Nuclide' column found"
@@ -86,7 +95,16 @@ class HAZCAT():
             df.columns = df.columns.str.strip()
 
             if "Nuclide" in df.columns:
-                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[
+                #    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                #        rf"^{radionuclide.upper()}|{radionuclide.upper()}", na=False)
+                # ]
+
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
                 return df_filtered if not df_filtered.empty else "No data found"
             else:
                 return "No 'Nuclide' column found"
@@ -116,7 +134,17 @@ class HAZCAT():
             # Ensure "Nuclide" column exists
             if "Nuclide" in df.columns:
                 # Filter rows where Nuclide matches the input (case insensitive)
-                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[
+                #    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                #        rf"^{radionuclide.upper()}|{radionuclide.upper()}", na=False)
+                # ]
+
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
+
                 return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
             else:
                 return "No 'Nuclide' column found in the file."
@@ -151,7 +179,17 @@ class HAZCAT():
             # Ensure "Nuclide" column exists
             if "Nuclide" in df.columns:
                 # Filter rows where Nuclide matches the input (case insensitive)
-                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[
+                #    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                #        rf"^{radionuclide.upper()}|{radionuclide.upper()}", na=False)
+                # ]
+
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
+
                 return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
             else:
                 return "No 'Nuclide' column found in the file."
@@ -186,7 +224,17 @@ class HAZCAT():
             # Ensure "Nuclide" column exists
             if "Nuclide" in df.columns:
                 # Filter rows where Nuclide matches the input (case insensitive)
-                df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+                # df_filtered = df[
+                #    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                #        rf"^{radionuclide.upper()}|{radionuclide.upper()}", na=False)
+                # ]
+
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
+
                 return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
             else:
                 return "No 'Nuclide' column found in the file."
@@ -229,7 +277,16 @@ class HAZCAT():
                 df.columns = expected_columns  # Assign column names if they match expected structure
 
             # Filter rows based on the radionuclide
-            df_filtered = df[df['Nuclide'] == radionuclide]
+            # df_filtered = df[df['Nuclide'] == radionuclide]
+
+            # df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
+            # ]
+
+            df_filtered = df[
+                df['Nuclide'].fillna('').astype(str).str.strip().str.upper().str.contains(
+                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
 
             if df_filtered.empty:
                 raise ValueError(f"No data found for radionuclide: {radionuclide}")
@@ -284,7 +341,16 @@ class HAZCAT():
                 raise ValueError("Expected column 'Nuclide' not found in dataset.")
 
             # Filter rows for the specified radionuclide
-            df_filtered = df[df['Nuclide'] == radionuclide]
+            # df_filtered = df[df['Nuclide'] == radionuclide]
+
+            # df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
+            # ]
+
+            df_filtered = df[
+                df['Nuclide'].fillna('').astype(str).str.contains(
+                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
 
             if df_filtered.empty:
                 raise ValueError(f"No data found for radionuclide: {radionuclide}")
@@ -334,7 +400,12 @@ class HAZCAT():
             df.drop(columns=['Element'], axis=1, inplace=True)
 
             # Filter based on the radionuclide
-            df_filtered = df[df['Nuclide'].fillna('').astype(str).str.startswith(radionuclide)]
+            # df_filtered = df[df['Nuclide'].fillna('').astype(str).str.startswith(radionuclide)]
+
+            df_filtered = df[
+                df['Nuclide'].fillna('').astype(str).str.contains(
+                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
 
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No matching data found for the given radionuclide."
@@ -369,7 +440,12 @@ class HAZCAT():
             df.dropna(subset=["Nuclide"], inplace=True)
 
             # Standardize radionuclide search (strip spaces and convert to uppercase)
-            df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+            # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+
+            df_filtered = df[
+                df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
 
             return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
 
@@ -408,8 +484,11 @@ class HAZCAT():
                 return "Error: No 'Nuclide' column found in the file."
 
             # Filter rows where Nuclide starts with the input (case insensitive)
-            df_filtered = df[df["Nuclide"].str.startswith(radionuclide, na=False)]
-
+            # df_filtered = df[df["Nuclide"].str.startswith(radionuclide, na=False)]
+            df_filtered = df[df["Nuclide"].str.contains(
+                rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
+            # print('df_filtered_new:', df_filtered)
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
 
@@ -448,7 +527,13 @@ class HAZCAT():
                 return "Error: No 'Nuclide' column found in the file."
 
             # Filter rows where Nuclide matches the input (case insensitive)
-            df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+            # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+
+            # also looks for substring if matches with nuclide name
+            df_filtered = df[
+                df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            ]
 
             return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
 
@@ -502,78 +587,8 @@ class HAZCAT():
             return "No valid DataFrames to merge."
 
         return pd.concat(valid_dfs, ignore_index=True, sort=False)
+
     '''
-    def filter_max_value_by_reference(self, df, radionuclide, nuclide_col, value_col, reference_col):
-        """
-        Filters the dataframe for the given radionuclide and selects the maximum value based on priority order:
-        1. 'ICRP119' or 'FGR' (take the maximum among these).
-        2. If none found, take the maximum from 'DOE-STD'.
-        3. If still none found, take the maximum from 'JAERI'.
-        4. If no data is available after filtering, return a message.
-
-        Args:
-            df (pd.DataFrame): Input dataframe.
-            radionuclide (str): Radionuclide name to filter.
-            nuclide_col (str): Column name for radionuclide.
-            value_col (str): Column name for values (e.g., "inh_adult").
-            reference_col (str): Column name for reference.
-
-        Returns:
-            pd.DataFrame or str: Filtered row(s) with the maximum value, or a message if no data is found.
-        """
-        # Ensure column names exist in the dataframe
-        required_cols = [nuclide_col, value_col, reference_col]
-        # print(required_cols)
-        for col in required_cols:
-            if col not in df.columns:
-                return f"Error: Column '{col}' not found in dataframe."
-
-        # Convert all columns to string to avoid issues
-        # print(df[nuclide_col] )
-        df[nuclide_col] = df[nuclide_col].astype(str).str.strip().str.upper()
-        df[reference_col] = df[reference_col].astype(str)
-
-        # Filter rows for the given radionuclide
-        df_filtered = df[df[nuclide_col] == radionuclide.upper()]
-        if df_filtered.empty:
-            return f"No data available for radionuclide: {radionuclide}"
-
-        # Function to check if reference contains specific keywords
-        def contains_keyword(df, keywords):
-            return df[df[reference_col].str.contains('|'.join(keywords), case=False, na=False)]
-
-        # Step 1: Look for 'ICRP119' or 'FGR' and get max value
-        df_priority1 = contains_keyword(df_filtered, ["ICRP_119", "FGR"])
-        if not df_priority1.empty:
-            df_priority1.loc[:, value_col] = pd.to_numeric(df_priority1[value_col], errors='coerce')
-
-            # df_priority1[value_col] = pd.to_numeric(df_priority1[value_col], errors='coerce')
-            print(f"DCF (max) taken from {df_priority1['Reference'].iloc[0]}".format())
-            return df_priority1[value_col].max()
-
-        # Step 2: If no 'ICRP119' or 'FGR', look for 'DOE-STD'
-        df_priority2 = contains_keyword(df_filtered, ["DOE_STD"])
-        if not df_priority2.empty:
-            df_priority2.loc[:, value_col] = pd.to_numeric(df_priority2[value_col], errors='coerce')
-
-            # df_priority2[value_col] = pd.to_numeric(df_priority2[value_col], errors='coerce')
-            print(f"DCF (max) taken from DOE-STD-1196-2011 {df_priority2['Reference']}".format())
-            return df_priority2[value_col].max()
-
-        # Step 3: If no 'DOE-STD', look for 'JAERI'
-        df_priority3 = contains_keyword(df_filtered, ["JAERI"])
-        if not df_priority3.empty:
-            df_priority3.loc[:, value_col] = pd.to_numeric(df_priority3[value_col], errors='coerce')
-            print("DCF (max) taken from JAERI-Data/Code 2002-013")
-            # df_priority3[value_col] = pd.to_numeric(df_priority3[value_col], errors='coerce')
-            return df_priority3[value_col].max(skipna=True)
-
-        # Step 4: If no data found after filtering, return message
-        return f"No data available for radionuclide: {radionuclide}"
-    '''
-
-
-
     def filter_max_value_by_reference(self, df, nuclide_col, value_col, reference_col):
         """
         Filters the dataframe and selects the maximum value based on priority order:
@@ -622,6 +637,7 @@ class HAZCAT():
                 else:
                     # Step 3: If no 'DOE-STD', look for 'JAERI'
                     df_priority3 = contains_keyword(group, ["JAERI"])
+                    print('df_priority3:', df_priority3)
                     if not df_priority3.empty:
                         max_value = df_priority3[value_col].max()
                         source = "JAERI-Data/Code 2002-013"
@@ -630,7 +646,78 @@ class HAZCAT():
                         source = "No data available"
 
             results.append({nuclide_col: radionuclide, value_col: max_value, reference_col: source})
+        print('max_value:', max_value)
+        return max_value
+    '''
 
+    def filter_max_value_by_reference(self, df, nuclide_col, value_col, reference_col):
+        """
+        Filters the dataframe and selects the maximum value based on priority order:
+        1. 'ICRP119' or 'FGR' (take the maximum among these).
+        2. If none found, take the maximum from 'DOE-STD'.
+        3. If still none found, take the maximum from 'JAERI'.
+        4. If no data is available after filtering, return a message.
+
+        Args:
+            df (pd.DataFrame): Input dataframe.
+            nuclide_col (str): Column name for radionuclide.
+            value_col (str): Column name for values (e.g., "inh_adult").
+            reference_col (str): Column name for reference.
+
+        Returns:
+            float: Maximum value for the given radionuclide, or None if no data is found.
+        """
+
+        # Ensure required columns exist in the dataframe
+        required_cols = [nuclide_col, value_col, reference_col]
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"Error: Column '{col}' not found in dataframe.")
+
+        # Convert relevant columns to appropriate types
+        df[nuclide_col] = df[nuclide_col].astype(str).str.strip().str.upper()
+        df[reference_col] = df[reference_col].astype(str)
+        df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
+
+        # Function to check if reference contains specific keywords
+        def contains_keyword(df, keywords):
+            return df[df[reference_col].str.contains('|'.join(keywords), case=False, na=False)]
+
+        results = []
+
+        # Iterate over unique nuclides in the dataframe
+        unique_nuclides = df[nuclide_col].unique()
+
+        for radionuclide in unique_nuclides:
+            # Filter dataframe for rows where 'Nuclide' contains the radionuclide substring
+            subset_df = df[df[nuclide_col].str.contains(rf"^{radionuclide}|{radionuclide}", na=False, case=False)]
+
+            if subset_df.empty:
+                continue
+
+            # Step 1: Look for 'ICRP119' or 'FGR' and get max value
+            df_priority1 = contains_keyword(subset_df, ["ICRP_119", "FGR"])
+            if not df_priority1.empty:
+                max_value = df_priority1[value_col].max()
+                source = df_priority1[reference_col].iloc[0]
+            else:
+                # Step 2: If no 'ICRP119' or 'FGR', look for 'DOE-STD'
+                df_priority2 = contains_keyword(subset_df, ["DOE_STD"])
+                if not df_priority2.empty:
+                    max_value = df_priority2[value_col].max()
+                    source = df_priority2[reference_col].iloc[0]
+                else:
+                    # Step 3: If no 'DOE-STD', look for 'JAERI'
+                    df_priority3 = contains_keyword(subset_df, ["JAERI"])
+                    if not df_priority3.empty:
+                        max_value = df_priority3[value_col].max()
+                        source = "JAERI-Data/Code 2002-013"
+                    else:
+                        max_value = None
+                        source = "No data available"
+
+            results.append({nuclide_col: radionuclide, value_col: max_value, reference_col: source})
+        print('DCF by ranking w.r.t references:', results)
         return max_value
 
     def compute_max_dcf(self, radionuclide):
@@ -648,7 +735,7 @@ class HAZCAT():
 
         # first get the nuclide info for getting altername names, if any
         nuclide_info = self.get_nuclide_info(radionuclide)
-        print('nuclide_infossss:', nuclide_info)
+        print('nuclide_info:', nuclide_info)
 
         # Ensure "alternate names" key exists in the dictionary
         if "alternate names" not in nuclide_info or not isinstance(nuclide_info["alternate names"], dict):
@@ -766,25 +853,19 @@ class HAZCAT():
             (merged_df_inh_hc3, "inh_adult_1mu_m"),
             (merged_df_ing_hc3, "ing_adult"),
         ]
-        # print('merged_df_inh_hc2:', merged_df_inh_hc2['inh_adult'])
+        # print('merged_df_inh_hc3:', merged_df_inh_hc3['inh_adult'])
 
         max_dcf_inh_hc2, max_dcf_sub_hc2, max_dcf_inh_hc3, max_dcf_ing_hc3 = [
             self.filter_max_value_by_reference(df, "Nuclide", col, "Reference") if isinstance(df,
-                                                                                                            pd.DataFrame) else np.nan
+                                                                                              pd.DataFrame) else np.nan
             for df, col in fields
         ]
-
-        #max_dcf_inh_hc2, max_dcf_sub_hc2, max_dcf_inh_hc3, max_dcf_ing_hc3 = [
-        #    self.filter_max_value_by_reference(df, radionuclide, "Nuclide", col, "Reference") if isinstance(df,
-        #                                                                                                    pd.DataFrame) else np.nan
-        #    for df, col in fields
-        #]
 
         dict_dcf['max_dcf_inh_hc2'] = max_dcf_inh_hc2
         dict_dcf['max_dcf_sub_hc2'] = max_dcf_sub_hc2
         dict_dcf['max_dcf_inh_hc3'] = max_dcf_inh_hc3
         dict_dcf['max_dcf_ing_hc3'] = max_dcf_ing_hc3
-
+        # print('max_dcf_inh_hc3:', max_dcf_inh_hc3)
         return dict_dcf
 
     # Define function to get atomic mass from CSV
@@ -817,9 +898,9 @@ class HAZCAT():
 
             nuclide_name = clean_nuclide_name(nuclide_name)
             # print('mass_:', nuclide_name)
-            #if len(nuclide_name.split('m')) > 1:
+            # if len(nuclide_name.split('m')) > 1:
             #    nuclide_name = nuclide_name.split('m')[0]
-            #else:
+            # else:
             #    nuclide_name = nuclide_name
 
             # Ensure 'Nuclide' and 'Atomic Mass' columns exist
@@ -1186,6 +1267,7 @@ class HAZCAT():
 
         return result
     '''
+
     # Example usage:
     # print(get_nuclide_info("Ir-179"))
 
@@ -1194,7 +1276,7 @@ class HAZCAT():
         lambda_of_rads = []
         for nuclide_name in self.rads_list:
             nuclide_info = self.get_nuclide_info(nuclide_name)
-            print(nuclide_info)
+            # print(nuclide_info)
             half_lives.append(nuclide_info['Half-life (s)'])
             lambda_of_rads.append(nuclide_info['Decay Constant (s^-1)'])
 
@@ -1535,6 +1617,9 @@ class HAZCAT():
             ("Xenon", "Xe-135m", "15.29 m", 1.6E-09),
             ("Xenon", "Xe-137", "3.818 m", 9.4E-10),
             ("Xenon", "Xe-138", "14.17 m", 4.7E-09),
+            ("Neon", "N-13", "9.965 m", 4.0E-09),
+            ("Oxygen", "O-14", "1.17677 m", 1.4E-08),
+            ("Oxygen", "O-15", "2.03733 m", 4.0E-09),
         ]
 
         df = pd.DataFrame(data, columns=["Element", "Nuclide", "Half-life", "dcf_sub (Sv/day per Bq/m^3)"])
@@ -2198,8 +2283,11 @@ class HAZCAT():
             if not np.isnan(R) and type(DCF_inhalation) == float:
                 try:
                     iTQ_HC3 = np.array(10 / (R * SA * CHI_BY_Q * DCF_inhalation * BR))
+
                     iTQ_HC3_gram = iTQ_HC3 * factor
+
                     iTQ_HC3_curie = iTQ_HC3_gram * SA
+                    # print(iTQ_HC3, R, SA, CHI_BY_Q, DCF_inhalation, BR, iTQ_HC3_gram)
                 except ZeroDivisionError:
                     print("Error: Division by zero in iTQ_HC3 calculation.")
                     iTQ_HC3_gram = np.inf
@@ -2266,7 +2354,6 @@ class HAZCAT():
                 print(f"NOTE: B_v data not available for {rad}")
                 fing_TQ_HC3_curie = np.inf
                 fing_TQ_HC3_gram = np.inf
-
 
             # water ingestion pathway
             # CT contact time: 9 days

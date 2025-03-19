@@ -289,7 +289,7 @@ class HAZCAT():
             ]
 
             if df_filtered.empty:
-                raise ValueError(f"No data found for radionuclide: {radionuclide}")
+                raise ValueError(f"No data found for radionuclide in Table:4.6 (FGR_15, submersion): {radionuclide}")
 
             return df_filtered
 
@@ -341,19 +341,19 @@ class HAZCAT():
                 raise ValueError("Expected column 'Nuclide' not found in dataset.")
 
             # Filter rows for the specified radionuclide
-            # df_filtered = df[df['Nuclide'] == radionuclide]
+            df_filtered = df[df['Nuclide'] == radionuclide]
 
             # df_filtered = df[
             #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
             # ]
-
-            df_filtered = df[
-                df['Nuclide'].fillna('').astype(str).str.contains(
-                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
-            ]
-
+            # print('df:', df)
+            #df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.contains(
+            #        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            #]
+            # print(df_filtered)
             if df_filtered.empty:
-                raise ValueError(f"No data found for radionuclide: {radionuclide}")
+                raise ValueError(f"No data found for radionuclide in Table_A3_DOE_STD_1196_2011: {radionuclide}")
 
             return df_filtered
 
@@ -2149,7 +2149,7 @@ class HAZCAT():
             sum_ep = float(self.get_nuclide_info(rad)['Photon'])
             E1s.append(sum_ep)
 
-        # print('E1s', E1s)
+        print('E1s', E1s)
         return E1s
 
     def compute_threshold_quantity_HC2_in_gram_and_curie(self,
@@ -2216,8 +2216,10 @@ class HAZCAT():
             #    print(f"WARNING: Submersion DCF not found for {rad} during HC2 TQ calculation".format(rad))
             #    DCF_submersion = 0
 
-            # gm 
+            # gm
+
             TQ_HC2 = np.array(1 / (R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)))
+
             # unit conversion factor
             factor = (0.01 / 3.7e10)
             TQ_HC2_gram = TQ_HC2 * factor
@@ -2391,6 +2393,11 @@ class HAZCAT():
             denominator = (E1 * mu_a * 24 * expofac * np.exp(-100 * mu_a * S))
             # print('E1_:', E1, mu_a)
             direct_expo_TQ_HC3 = (numerator / denominator)
+
+            if denominator == 0:
+                direct_expo_TQ_HC3 = float('inf')  # or some default value
+            else:
+                direct_expo_TQ_HC3 = numerator / denominator
 
             # air exposure: submersion dose
 

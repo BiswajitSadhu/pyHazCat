@@ -277,16 +277,16 @@ class HAZCAT():
                 df.columns = expected_columns  # Assign column names if they match expected structure
 
             # Filter rows based on the radionuclide
-            # df_filtered = df[df['Nuclide'] == radionuclide]
+            df_filtered = df[df['Nuclide'] == radionuclide]
 
             # df_filtered = df[
             #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
             # ]
 
-            df_filtered = df[
-                df['Nuclide'].fillna('').astype(str).str.strip().str.upper().str.contains(
-                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
-            ]
+            #df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.strip().str.upper().str.contains(
+            #        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+            #]
 
             if df_filtered.empty:
                 raise ValueError(f"No data found for radionuclide in Table:4.6 (FGR_15, submersion): {radionuclide}")
@@ -403,9 +403,12 @@ class HAZCAT():
             # df_filtered = df[df['Nuclide'].fillna('').astype(str).str.startswith(radionuclide)]
 
             df_filtered = df[
-                df['Nuclide'].fillna('').astype(str).str.contains(
-                    rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                df['Nuclide'].fillna('').astype(str).str.strip().str.contains(
+                    rf"(?:^|_){re.escape(radionuclide)}(?:_|$)", regex=True, na=False
+                )
             ]
+
+            print('new:', df_filtered)
 
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No matching data found for the given radionuclide."
@@ -2149,9 +2152,64 @@ class HAZCAT():
             sum_ep = float(self.get_nuclide_info(rad)['Photon'])
             E1s.append(sum_ep)
 
-        print('E1s', E1s)
+        # print('E1s', E1s)
         return E1s
 
+    @staticmethod
+    def _convert_to_float(value):
+        """ Converts a value to float, handling strings and missing values gracefully. """
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0
+
+    def compute_threshold_quantity_HC2_in_gram_and_curie(self, Rs, aws, half_lives, dcfs_dicts_rads_list,
+                                                         CHI_BY_Q=1e-04):
+        """
+        Computes the HC-2 threshold quantity in grams and curies based on NRC and DOE methodologies.
+        """
+        # Constants
+        BR = 3.3333E-4  # Respiration rate (m³/sec)
+        N_0 = 6.022E+23  # Avogadro's number
+        UNIT_CONVERSION_FACTOR = 0.01 / 3.7e10
+
+        TQ_HC2s_gram = []
+        TQ_HC2s_curie = []
+
+        for ndx, rad in enumerate(self.rads_list):
+            AW = aws[ndx]
+            t_half = half_lives[ndx]
+            R = Rs[ndx]
+
+            # setting nan to zero
+            DCF_inhalation = self._convert_to_float(dcfs_dicts_rads_list[rad].get('max_dcf_inh_hc2', 0))
+            if np.isnan(DCF_inhalation):
+                DCF_inhalation = 0.0
+            DCF_submersion = self._convert_to_float(dcfs_dicts_rads_list[rad].get('max_dcf_sub_hc2', 0))
+            if np.isnan(DCF_submersion):
+                DCF_submersion = 0.0
+
+            # Specific activity (Ci/gm)
+            SA = (np.log(2) * N_0) / (AW * t_half * 3.7E+10)
+
+            # Compute denominator
+            denominator = R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)
+
+            # Compute threshold quantity
+            TQ_HC2 = float('inf') if denominator == 0 else 1 / denominator
+            TQ_HC2_gram = TQ_HC2 * UNIT_CONVERSION_FACTOR
+            TQ_HC2_curie = TQ_HC2_gram * SA
+
+            # print('aa', DCF_inhalation, DCF_submersion, SA, TQ_HC2 , TQ_HC2_curie, TQ_HC2_gram)
+
+            TQ_HC2s_gram.append(TQ_HC2_gram)
+            TQ_HC2s_curie.append(TQ_HC2_curie)
+
+        return TQ_HC2s_curie, TQ_HC2s_gram
+
+
+
+    '''
     def compute_threshold_quantity_HC2_in_gram_and_curie(self,
                                                          Rs, aws, half_lives,
                                                          dcfs_dicts_rads_list,
@@ -2217,8 +2275,14 @@ class HAZCAT():
             #    DCF_submersion = 0
 
             # gm
+            denominator = R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)
 
-            TQ_HC2 = np.array(1 / (R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)))
+            if denominator == 0:
+                TQ_HC2 = float('inf')  # Or use a default value
+            else:
+                TQ_HC2 = np.array(1 / denominator)
+
+            # TQ_HC2 = np.array(1 / denom)
 
             # unit conversion factor
             factor = (0.01 / 3.7e10)
@@ -2227,7 +2291,7 @@ class HAZCAT():
             TQ_HC2s_gram.append(TQ_HC2_gram)
             TQ_HC2s_curie.append(TQ_HC2_curie)
         return TQ_HC2s_curie, TQ_HC2s_gram
-
+    '''
     def compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(self, Rs, aws, BVs,
                                                                     half_lives, E1s,
                                                                     dcfs_dicts_rads_list,
@@ -2261,6 +2325,7 @@ class HAZCAT():
             print('rad under computation:', rad)
             AW = np.float32(aws[ndx])
             t_half = half_lives[ndx]
+            print('dcfs_dicts_rads_list:', dcfs_dicts_rads_list)
             DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc3']
             # DCF_submersion = sub_dcfs[ndx][0]
             DCF_ingestion = dcfs_dicts_rads_list[rad]['max_dcf_ing_hc3']
@@ -2336,7 +2401,7 @@ class HAZCAT():
 
             # Convert to string and check conditions
             # print('B_v:', str(B_v).split(), 'R:', R)
-
+            print('DCF_ingestion:', DCF_ingestion)
             # Corrected condition
             if (str(R).strip() != "--" and not isinstance(R, str) and not np.isnan(R)) or \
                     (str(B_v).strip() != "--" and not isinstance(B_v, str) and not np.isnan(B_v)) or \
@@ -2379,6 +2444,13 @@ class HAZCAT():
                 wing_TQ_HC3_curie = np.inf
                 wing_TQ_HC3_gram = np.inf
 
+            # CONSOLIDATED list from ICRP 103, TABLE ANNEX C, AND JAERI-DATA/CODE-2002-013 TABLE 8
+            inert_gas_lists = ['Ar-37', 'Ar-39', 'Ar-41', 'Kr-74', 'Kr-76', 'Kr-77', 'Kr-79',
+                               'Kr-81', 'Kr-81m', 'Kr-83m', 'Kr-85', 'Kr-85m', 'Kr-87', 'Kr-88',
+                               'Xe-120', 'Xe-121', 'Xe-122', 'Xe-123', 'Xe-125', 'Xe-127', 'Xe-129m',
+                               'Xe-131m', 'Xe-133', 'Xe-133m', 'Xe-135', 'Xe-135m', 'Xe-138',
+                               'N-13', 'O-14', 'O-15', 'Ar-42', 'Ar-44', 'Kr-75', 'Kr-89', 'Xe-127m',
+                               'Xe-137']
             ##### External Exposure #######
             # duration of exposure : 1 day
             exposure_time = 1
@@ -2392,9 +2464,9 @@ class HAZCAT():
             numerator = (10 * S ** 2 * C_gamma)
             denominator = (E1 * mu_a * 24 * expofac * np.exp(-100 * mu_a * S))
             # print('E1_:', E1, mu_a)
-            direct_expo_TQ_HC3 = (numerator / denominator)
+            # direct_expo_TQ_HC3 = (numerator / denominator)
 
-            if denominator == 0:
+            if denominator == 0 or rad in inert_gas_lists:
                 direct_expo_TQ_HC3 = float('inf')  # or some default value
             else:
                 direct_expo_TQ_HC3 = numerator / denominator
@@ -2440,13 +2512,7 @@ class HAZCAT():
 
                 return submersion_TQ_HC3_curie
 
-            # CONSOLIDATED list from ICRP 103, TABLE ANNEX C, AND JAERI-DATA/CODE-2002-013 TABLE 8
-            inert_gas_lists = ['Ar-37', 'Ar-39', 'Ar-41', 'Kr-74', 'Kr-76', 'Kr-77', 'Kr-79',
-                               'Kr-81', 'Kr-81m', 'Kr-83m', 'Kr-85', 'Kr-85m', 'Kr-87', 'Kr-88',
-                               'Xe-120', 'Xe-121', 'Xe-122', 'Xe-123', 'Xe-125', 'Xe-127', 'Xe-129m',
-                               'Xe-131m', 'Xe-133', 'Xe-133m', 'Xe-135', 'Xe-135m', 'Xe-138',
-                               'N-13', 'O-14', 'O-15', 'Ar-42', 'Ar-44', 'Kr-75', 'Kr-89', 'Xe-127m',
-                               'Xe-137']
+
 
             if rad in inert_gas_lists:
                 submersion_TQ_HC3_curie = compute_submersion_TQ_HC3(rad)
@@ -2455,15 +2521,15 @@ class HAZCAT():
                       f"for {rad} as it is not an inert gas".format())
                 submersion_TQ_HC3_curie = np.inf
                 # print(f"Computed submersion_TQ_HC3_curie: {submersion_TQ_HC3_curie}")
-            '''
+            
             # Meteorological dispersion coefficient 30 meters 
             # from ground level releas[7.2x10-2 s/m3];
-            CHI_BY_Q_hc3 = 7.2e-02
-            factor = (0.01 / 3.7e10)
-            print('DCF_submersion:', DCF_submersion)
-            denominator_sub = CHI_BY_Q_hc3 * DCF_submersion
-            submersion_TQ_HC3_curie = (10/denominator_sub) * factor
-            '''
+            # CHI_BY_Q_hc3 = 7.2e-02
+            # factor = (0.01 / 3.7e10)
+            # print('DCF_submersion:', DCF_submersion)
+            # denominator_sub = CHI_BY_Q_hc3 * DCF_submersion
+            # submersion_TQ_HC3_curie = (10/denominator_sub) * factor
+            
 
             dominant_pathway_text = ''
 

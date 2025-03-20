@@ -27,6 +27,7 @@ Run the following commands:
 sudo dnf install python3-tkinter
 pip install numpy pandas
 
+---
 ### Running the GUI
 Step 1: Open Terminal
 

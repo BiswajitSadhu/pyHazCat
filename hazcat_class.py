@@ -388,12 +388,23 @@ class HAZCAT():
             # Filter based on the radionuclide
             # df_filtered = df[df['Nuclide'].fillna('').astype(str).str.startswith(radionuclide)]
 
-            df_filtered = df[
-                df['Nuclide'].fillna('').astype(str).str.strip().str.contains(
-                    rf"(?:^|_){re.escape(radionuclide)}(?:_|$)", regex=True, na=False
-                )
-            ]
+            #df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.strip().str.contains(
+            #        rf"(?:^|(?<=_)){re.escape(radionuclide)}(?:$|_)", regex=True, na=False
+            #    )
+            #]
 
+            # Regex pattern to match exact nuclide name or name followed by _anytext
+            pattern = rf"^{re.escape(radionuclide)}(_\w+)?$"
+            print("pattern:", pattern,radionuclide )
+            df_filtered = df[df["Nuclide"].str.match(pattern, na=False)]
+
+            #df_filtered = df[
+            #    df['Nuclide'].fillna('').astype(str).str.strip().str.fullmatch(
+            #        rf"{re.escape(radionuclide)}(?:_.*)?", na=False
+            #    )
+            #]
+            print('f:', df_filtered)
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No matching data found for the given radionuclide."
 
@@ -830,6 +841,8 @@ class HAZCAT():
         # Ensure both columns (inh_adult_1mu_m, inh_adult_5mu_m) are considered for
         # max_dcf_inh_hc3, handling NaNs properly. Take the maximum comparing both the columns
         if isinstance(merged_df_inh_hc3, pd.DataFrame):
+            merged_df_inh_hc3[["inh_adult_1mu_m", "inh_adult_5mu_m"]] = merged_df_inh_hc3[
+                ["inh_adult_1mu_m", "inh_adult_5mu_m"]].astype(float)
             merged_df_inh_hc3["max_inh_adult_hc3"] = merged_df_inh_hc3[["inh_adult_1mu_m", "inh_adult_5mu_m"]].max(
                 axis=1, skipna=True)
 
@@ -1037,6 +1050,7 @@ class HAZCAT():
         fallback_data = fallback_df[fallback_df["Fixed_nuclide_name"] == nuclide_name]
 
         dict_info = {}
+        alternate_names = {}
 
         if not fallback_data.empty:
             # Extract alternate names
@@ -1083,7 +1097,15 @@ class HAZCAT():
 
         # Search primary dataset and populate dict_info with missing values
         df = pd.read_csv(primary_file)
+        # USING ICRP-107 nomenclature to find photon data, half life
+        if alternate_names and 'ICRP119_107_name' in alternate_names:
+            nuclide_name = alternate_names['ICRP119_107_name']
+        else:
+            nuclide_name = nuclide_name  # Fallback to original radionuclide name
+
+        # nuclide_name = alternate_names['ICRP119_107_name']
         nuclide_data = df[df["Nuclide"] == nuclide_name]
+        # print('nuclide_data:sss', nuclide_data, alternate_names)
 
         if not nuclide_data.empty:
             half_life_str = str(nuclide_data["Half-life"].values[0])

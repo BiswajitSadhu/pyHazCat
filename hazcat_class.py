@@ -2,6 +2,9 @@ import numpy as np
 import os
 import pandas as pd
 import re
+import warnings
+warnings.simplefilter(action='ignore', category=pd.errors.ParserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 os.getcwd()
 import logging
@@ -49,7 +52,6 @@ class HAZCAT():
             DataFrame: Filtered rows containing the specified radionuclide.
         """
         try:
-            print("the inhhhhhhhhhhhhh:", radionuclide)
             df = pd.read_excel(file_path, engine="openpyxl")
             # df.columns = df.columns.str.strip()
             df.columns = ['Nuclide', 'Half-life', 'Type', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
@@ -166,16 +168,10 @@ class HAZCAT():
         try:
             # Read CSV, treating the first row as the header
             df = pd.read_csv(file_path, skiprows=0)
-            # df.columns = ['Index', 'Nuclide', 'Type', 'f1',  'Newborn', '1-year' ,'5-year', '10-year',
-            #      '15-year', 'Adult','Reference Person']
-            # first column index is removed
-            # print(df)
             df.columns = ['Index', 'Nuclide', 'Half-life', 'Type', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
                           'inh_1_year', 'inh_5_years', 'inh_10_years', 'inh_15_years', 'inh_adult']
 
             df = df.iloc[:, 1:]
-            # print(df)
-
             # Ensure "Nuclide" column exists
             if "Nuclide" in df.columns:
                 # Filter rows where Nuclide matches the input (case insensitive)
@@ -220,7 +216,6 @@ class HAZCAT():
 
             # first column index is removed
             df = df.iloc[:, 1:]
-            # print(df)
             # Ensure "Nuclide" column exists
             if "Nuclide" in df.columns:
                 # Filter rows where Nuclide matches the input (case insensitive)
@@ -331,7 +326,7 @@ class HAZCAT():
 
             # Drop the original columns if needed
             df.drop(df.columns[[1, 2]], axis=1, inplace=True)
-            # print(df)
+
             # Drop fully empty rows
             # df.dropna(axis=0, how='all', inplace=True)
             df.columns = ["Nuclide", "sub_adult", "Half-life"]
@@ -343,15 +338,6 @@ class HAZCAT():
             # Filter rows for the specified radionuclide
             df_filtered = df[df['Nuclide'] == radionuclide]
 
-            # df_filtered = df[
-            #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
-            # ]
-            # print('df:', df)
-            #df_filtered = df[
-            #    df['Nuclide'].fillna('').astype(str).str.contains(
-            #        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
-            #]
-            # print(df_filtered)
             if df_filtered.empty:
                 raise ValueError(f"No data found for radionuclide in Table_A3_DOE_STD_1196_2011: {radionuclide}")
 
@@ -408,8 +394,6 @@ class HAZCAT():
                 )
             ]
 
-            print('new:', df_filtered)
-
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No matching data found for the given radionuclide."
 
@@ -443,7 +427,7 @@ class HAZCAT():
             df.dropna(subset=["Nuclide"], inplace=True)
 
             # Standardize radionuclide search (strip spaces and convert to uppercase)
-            # df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
+            df_filtered = df[df["Nuclide"].astype(str).str.strip().str.upper() == radionuclide.upper()]
 
             df_filtered = df[
                 df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
@@ -487,11 +471,10 @@ class HAZCAT():
                 return "Error: No 'Nuclide' column found in the file."
 
             # Filter rows where Nuclide starts with the input (case insensitive)
-            # df_filtered = df[df["Nuclide"].str.startswith(radionuclide, na=False)]
+            #df_filtered = df[df["Nuclide"].str.startswith(radionuclide, na=False)]
             df_filtered = df[df["Nuclide"].str.contains(
-                rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                rf"(?:^|_)(?:{radionuclide})(?:_|$)", regex=True, na=False)
             ]
-            # print('df_filtered_new:', df_filtered)
             # If no rows match, return a message
             return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
 
@@ -720,7 +703,6 @@ class HAZCAT():
                         source = "No data available"
 
             results.append({nuclide_col: radionuclide, value_col: max_value, reference_col: source})
-        print('DCF by ranking w.r.t references:', results)
         return max_value
 
     def compute_max_dcf(self, radionuclide):
@@ -845,18 +827,51 @@ class HAZCAT():
             Table_6_JAERI_DATA_CODE_2002_013=result_tab6
         )
 
+        # Ensure both columns (inh_adult_1mu_m, inh_adult_5mu_m) are considered for
+        # max_dcf_inh_hc3, handling NaNs properly. Take the maximum comparing both the columns
+        if isinstance(merged_df_inh_hc3, pd.DataFrame):
+            merged_df_inh_hc3["max_inh_adult_hc3"] = merged_df_inh_hc3[["inh_adult_1mu_m", "inh_adult_5mu_m"]].max(
+                axis=1, skipna=True)
+
         merged_df_ing_hc3 = self.merge_dataframes_with_source_hc3(
             Annex_A_ICRP_119=result_annexa,
             Table_3_JAERI_DATA_CODE_2002_013=result_tab3
         )
-        # print(merged_df_inh_hc2)
+
+        # NOTE INHLATION DATA TAKEN FOR 5MU_M
         fields = [
             (merged_df_inh_hc2, "inh_adult"),
             (merged_df_sub_hc2, "sub_adult"),
-            (merged_df_inh_hc3, "inh_adult_1mu_m"),
+            (merged_df_inh_hc3, "max_inh_adult_hc3"),
             (merged_df_ing_hc3, "ing_adult"),
         ]
-        # print('merged_df_inh_hc3:', merged_df_inh_hc3['inh_adult'])
+
+        # Print useful info for each dataframe in fields
+        # Mapping columns to their respective HC category
+        hc_category_map = {
+            "inh_adult": "HC2",
+            "sub_adult": "HC2",
+            "max_inh_adult_hc3": "HC3",
+            "ing_adult": "HC3"
+        }
+
+        # Iterate through each dataframe and column pair
+        for df, col_name in fields:
+            hc_category = hc_category_map.get(col_name, "Unknown HC")  # Get HC category
+
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                # Print complete dataframe
+                print(f"\n========== COMPLETE DATA for {col_name} ({hc_category}) ==========\n")
+                print(df.to_string(index=False))  # Print entire dataframe
+                print(f"\nTotal Rows: {len(df)} | Columns: {list(df.columns)}\n")
+
+                # Print selected column preview
+                print(f"\n========== FINAL SCREENED DATA PREVIEW for {col_name} ({hc_category}) ==========\n")
+                print(df[["Nuclide", col_name, "Reference"]].head(10).to_string(index=False))  # Show first 10 rows
+                print(f"\nTotal Rows: {len(df)} | Selected Columns: ['Nuclide', '{col_name}', 'Reference']\n")
+
+            else:
+                print(f"\n========== No Data Available for {col_name} ({hc_category}) ==========\n")
 
         max_dcf_inh_hc2, max_dcf_sub_hc2, max_dcf_inh_hc3, max_dcf_ing_hc3 = [
             self.filter_max_value_by_reference(df, "Nuclide", col, "Reference") if isinstance(df,
@@ -2325,7 +2340,7 @@ class HAZCAT():
             print('rad under computation:', rad)
             AW = np.float32(aws[ndx])
             t_half = half_lives[ndx]
-            print('dcfs_dicts_rads_list:', dcfs_dicts_rads_list)
+            # print('dcfs_dicts_rads_list:', dcfs_dicts_rads_list)
             DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc3']
             # DCF_submersion = sub_dcfs[ndx][0]
             DCF_ingestion = dcfs_dicts_rads_list[rad]['max_dcf_ing_hc3']
@@ -2401,7 +2416,7 @@ class HAZCAT():
 
             # Convert to string and check conditions
             # print('B_v:', str(B_v).split(), 'R:', R)
-            print('DCF_ingestion:', DCF_ingestion)
+            # print('DCF_ingestion:', DCF_ingestion)
             # Corrected condition
             if (str(R).strip() != "--" and not isinstance(R, str) and not np.isnan(R)) or \
                     (str(B_v).strip() != "--" and not isinstance(B_v, str) and not np.isnan(B_v)) or \

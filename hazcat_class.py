@@ -154,6 +154,42 @@ class HAZCAT():
         except Exception as e:
             return f"Error: {e}"
 
+    # NOT USED; this is for ingestion dose conversion factor of public from table 3
+    def screen_Table_4_JAERI_dcf_ingestion_public_by_radionuclides(self, radionuclide,
+                                                                   file_path='/home/biswajit/Documents/pydoseia_stable/pyDOSEIA-dev/library/ingestion_public/x.csv'):
+        """
+        Reads a CSV file and extracts rows containing the specified radionuclide.
+
+        Parameters:
+            file_path (str): Path to the CSV file.
+            radionuclide (str): Radionuclide name (e.g., "Cs-137").
+
+        Returns:
+            DataFrame: Filtered rows containing the specified radionuclide.
+        """
+        try:
+            # Read CSV, treating the first row as the header
+            df = pd.read_csv(file_path, header=0)
+
+            df.columns = ['Nuclide', 'Half-life', 'f1', 'inh_infant', 'f1_age_g_gt_1a',
+                          'inh_1_year', 'inh_5_years', 'inh_10_years', 'inh_15_years',
+                          'inh_adult']
+            # print(df)
+            # Ensure "Nuclide" column exists
+            if "Nuclide" in df.columns:
+                # Filter rows where Nuclide matches the input (case insensitive)
+                df_filtered = df[
+                    df["Nuclide"].astype(str).str.strip().str.upper().str.contains(
+                        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
+                ]
+                print(df_filtered)
+                return df_filtered if not df_filtered.empty else "No data found for the given radionuclide."
+            else:
+                return "No 'Nuclide' column found in the file."
+
+        except Exception as e:
+            return f"Error: {e}"
+
     def screen_Table_5_JAERI_dcf_inh_particulates_public_by_radionuclide(self, file_path, radionuclide):
         """
         Reads a cleaned CSV file and extracts rows containing the specified radionuclide.
@@ -273,15 +309,6 @@ class HAZCAT():
 
             # Filter rows based on the radionuclide
             df_filtered = df[df['Nuclide'] == radionuclide]
-
-            # df_filtered = df[
-            #    df['Nuclide'].fillna('').astype(str).str.contains(rf"^{radionuclide}|{radionuclide}", na=False)
-            # ]
-
-            #df_filtered = df[
-            #    df['Nuclide'].fillna('').astype(str).str.strip().str.upper().str.contains(
-            #        rf"(?:^|_)(?:{radionuclide.upper()})(?:_|$)", regex=True, na=False)
-            #]
 
             if df_filtered.empty:
                 raise ValueError(f"No data found for radionuclide in Table:4.6 (FGR_15, submersion): {radionuclide}")
@@ -584,68 +611,6 @@ class HAZCAT():
             return "No valid DataFrames to merge."
 
         return pd.concat(valid_dfs, ignore_index=True, sort=False)
-
-    '''
-    def filter_max_value_by_reference(self, df, nuclide_col, value_col, reference_col):
-        """
-        Filters the dataframe and selects the maximum value based on priority order:
-        1. 'ICRP119' or 'FGR' (take the maximum among these).
-        2. If none found, take the maximum from 'DOE-STD'.
-        3. If still none found, take the maximum from 'JAERI'.
-        4. If no data is available after filtering, return a message.
-
-        Args:
-            df (pd.DataFrame): Input dataframe.
-            nuclide_col (str): Column name for radionuclide.
-            value_col (str): Column name for values (e.g., "inh_adult").
-            reference_col (str): Column name for reference.
-
-        Returns:
-            pd.DataFrame: Filtered dataframe with max values for each radionuclide.
-        """
-        # Ensure column names exist in the dataframe
-        required_cols = [nuclide_col, value_col, reference_col]
-        for col in required_cols:
-            if col not in df.columns:
-                raise ValueError(f"Error: Column '{col}' not found in dataframe.")
-
-        # Convert relevant columns to appropriate types
-        df[nuclide_col] = df[nuclide_col].astype(str).str.strip().str.upper()
-        df[reference_col] = df[reference_col].astype(str)
-        df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
-
-        # Function to check if reference contains specific keywords
-        def contains_keyword(df, keywords):
-            return df[df[reference_col].str.contains('|'.join(keywords), case=False, na=False)]
-
-        results = []
-        for radionuclide, group in df.groupby(nuclide_col):
-            # Step 1: Look for 'ICRP119' or 'FGR' and get max value
-            df_priority1 = contains_keyword(group, ["ICRP_119", "FGR"])
-            if not df_priority1.empty:
-                max_value = df_priority1[value_col].max()
-                source = df_priority1[reference_col].iloc[0]
-            else:
-                # Step 2: If no 'ICRP119' or 'FGR', look for 'DOE-STD'
-                df_priority2 = contains_keyword(group, ["DOE_STD"])
-                if not df_priority2.empty:
-                    max_value = df_priority2[value_col].max()
-                    source = df_priority2[reference_col].iloc[0]
-                else:
-                    # Step 3: If no 'DOE-STD', look for 'JAERI'
-                    df_priority3 = contains_keyword(group, ["JAERI"])
-                    print('df_priority3:', df_priority3)
-                    if not df_priority3.empty:
-                        max_value = df_priority3[value_col].max()
-                        source = "JAERI-Data/Code 2002-013"
-                    else:
-                        max_value = None
-                        source = "No data available"
-
-            results.append({nuclide_col: radionuclide, value_col: max_value, reference_col: source})
-        print('max_value:', max_value)
-        return max_value
-    '''
 
     def filter_max_value_by_reference(self, df, nuclide_col, value_col, reference_col):
         """
@@ -1021,9 +986,9 @@ class HAZCAT():
         return Rs
 
     def get_nuclide_info(self, nuclide_name,
-                         primary_file="/home/biswajit/Documents/HAZCAT_CODE/HazCat/pyHazCat/library/half_life/radionuclides_halflife_complete.csv",
-                         jaeri_file="/home/biswajit/Documents/HAZCAT_CODE/HazCat/pyHazCat/library/half_life/Table1_2_JAERI_half_life.csv",
-                         fallback_file="/home/biswajit/Documents/HAZCAT_CODE/HazCat/pyHazCat/library/half_life/formatted_nuclide_nomenclature.csv"):
+                         primary_file="library/half_life/radionuclides_halflife_complete.csv",
+                         jaeri_file="library/half_life/Table1_2_JAERI_half_life.csv",
+                         fallback_file="library/half_life/formatted_nuclide_nomenclature.csv"):
         """Retrieve nuclide information from fallback, primary, and JAERI datasets, and merge additional info."""
 
         def convert_half_life_to_seconds(half_life):
@@ -1142,172 +1107,6 @@ class HAZCAT():
 
         return dict_info if dict_info else f"Nuclide {nuclide_name} not found in any dataset."
 
-    '''
-    def get_nuclide_info(self, nuclide_name,
-                         primary_file="library/half_life/radionuclides_halflife_complete.csv",
-                         jaeri_file="library/half_life/Table1_2_JAERI_half_life.csv",
-                         fallback_file="library/half_life/formatted_nuclide_nomenclature.csv"):
-        """Retrieve nuclide information from primary, JAERI, or fallback dataset."""
-
-        # Load primary dataset
-        df = pd.read_csv(primary_file)
-        nuclide_data = df[df["Nuclide"] == nuclide_name]
-
-        def convert_half_life_to_seconds(half_life):
-            """Convert half-life string with unit to seconds."""
-            units = {"ls": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600, "d": 86400, "y": 31556952}
-
-            if isinstance(half_life, (int, float)):  # If already numeric, return as is
-                return half_life
-
-            if isinstance(half_life, str):
-                half_life = half_life.strip()
-                for unit, factor in units.items():
-                    if half_life.endswith(unit):
-                        try:
-                            value = float(half_life.replace(unit, "").strip())
-                            return value * factor
-                        except ValueError:
-                            return None  # If conversion fails
-
-            return None  # If no match
-
-        if nuclide_data.empty:
-            print(f"Fetching from JAERI dataset: {jaeri_file}")
-            try:
-                jaeri_df = pd.read_csv(jaeri_file).dropna()
-                nuclide_data = jaeri_df[jaeri_df["Nuclide"] == nuclide_name]
-                if nuclide_data.empty:
-                    print(f"Fetching from fallback dataset: {fallback_file}")
-                    fallback_df = pd.read_csv(fallback_file)
-
-                    fallback_data = fallback_df[fallback_df["Fixed_nuclide_name"] == nuclide_name]
-                    # print(fallback_data)
-
-                    if not fallback_data.empty:
-                        # find altername names and store in a dict
-                        alternate_names = {
-                            "DOE_STD_1196_name": fallback_data["DOE_STD_1196_name"].values[
-                                0] if "DOE_STD_1196_name" in fallback_data.columns else None,
-                            "FGR_12_name": fallback_data["FGR_12_name"].values[
-                                0] if "FGR_12_name" in fallback_data.columns else None,
-                            "ICRP_38_name": fallback_data["ICRP_38_name"].values[
-                                0] if "ICRP_38_name" in fallback_data.columns else None
-                        }
-
-                        # Remove keys with None or NaN values
-                        alternate_names = {key: value for key, value in alternate_names.items() if
-                                           pd.notna(value) and value is not None}
-
-                        half_life_values = []
-                        for i in range(5):  # Check multiple half-life columns
-                            half_life_col = f"Half-life{'' if i == 0 else '.' + str(i)}"
-                            unit_col = f"unit{'' if i == 0 else '.' + str(i)}"
-
-                            if half_life_col in fallback_data.columns and unit_col in fallback_data.columns:
-                                # Get column values as lists
-                                half_life_list = fallback_data[half_life_col].dropna().tolist()
-                                unit_list = fallback_data[unit_col].dropna().tolist()
-
-                                # Convert using list comprehension instead of apply()
-                                converted_values = [
-                                    convert_half_life_to_seconds(f"{hl} {unit}")
-                                    for hl, unit in zip(half_life_list, unit_list)
-                                    if pd.notna(hl) and pd.notna(unit)  # Ensure valid values
-                                ]
-
-                                half_life_values.extend(filter(None, converted_values))  # Remove N
-
-                        if half_life_values:
-                            max_half_life = max(half_life_values)
-                            decay_constant = 0.693 / max_half_life if max_half_life > 0 else "N/A"
-                            return {"Nuclide": nuclide_name, "alternate names": alternate_names, "Half-life (s)": max_half_life,
-                                    "Decay Constant (s^-1)": decay_constant}
-
-                    return f"Nuclide {nuclide_name} not found in any dataset."
-            except Exception as e:
-                return f"Error loading JAERI or fallback file: {e}"
-
-        # Extract half-life and convert to seconds
-        half_life_str = str(nuclide_data["Half-life"].values[0])
-        half_life = convert_half_life_to_seconds(half_life_str)
-
-        decay_constant = 0.693 / half_life if isinstance(half_life, (int, float)) and half_life > 0 else "N/A"
-
-        result = {
-            "Nuclide": nuclide_name,
-            "Half-life (s)": half_life,
-            "Decay Constant (s^-1)": decay_constant
-        }
-
-        for column in nuclide_data.columns[1:]:
-            result[column] = nuclide_data[column].values[0]
-
-        return result
-    '''
-    '''
-    def convert_half_life_to_seconds(self, half_life):
-        units = {"ls": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600, "d": 86400, "y": 31536000}
-        for unit, factor in units.items():
-            if half_life.endswith(unit):
-                try:
-                    value = float(half_life.replace(unit, "").strip())
-                    return value * factor
-                except ValueError:
-                    return half_life  # Return as is if conversion fails
-        return half_life  # Return as is if no unit matches
-    
-
-    def get_nuclide_info(self, nuclide_name):
-        """Retrieve nuclide information from primary or JAERI dataset."""
-        primary_file = "library/radionuclides_halflife_complete.csv"
-        jaeri_file = "library/JAERI-Data-Code 2002-Table4_CSV_FINAL.xlsx"
-
-        def convert_half_life_to_seconds(half_life):
-            units = {"ls": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600, "d": 86400, "y": 31556952}
-            for unit, factor in units.items():
-                if half_life.endswith(unit):
-                    try:
-                        value = float(half_life.replace(unit, "").strip())
-                        return value * factor
-                    except ValueError:
-                        return half_life  # Return as is if conversion fails
-            return half_life  # Return as is if no unit matches
-
-        # Load primary dataset
-        df = pd.read_csv(primary_file)
-        nuclide_data = df[df["Nuclide"] == nuclide_name]
-
-        if nuclide_data.empty:
-            print("Fetching from JAERI dataset...")
-            try:
-                jaeri_df = pd.read_excel(jaeri_file, sheet_name="JAERI-IngestionDCF")
-                jaeri_df = jaeri_df.dropna()
-                nuclide_data = jaeri_df[jaeri_df["Nuclide"] == nuclide_name]
-                if nuclide_data.empty:
-                    return f"Nuclide {nuclide_name} not found."
-                if "Hg" in nuclide_name:
-                    raise ValueError("refined JAERI dataset (JAERI-Data-Code 2002-Table4_CSV_FINAL.xlsx) does not "
-                                     "have half-life information for Mercury (Hg) nuclides. Please update it manually")
-            except Exception as e:
-                return f"Error loading JAERI file: {e}"
-
-        half_life = convert_half_life_to_seconds(nuclide_data["Half-life"].values[0])
-        decay_constant = 0.693 / half_life if isinstance(half_life, (int, float)) and half_life > 0 else "N/A"
-
-        result = {
-            "Nuclide": nuclide_name,
-            "Half-life (s)": half_life,
-            "Decay Constant (s^-1)": decay_constant
-        }
-
-        # Include all additional columns from either dataset
-        for column in nuclide_data.columns[1:]:  # Skip 'Nuclide' column
-            result[column] = nuclide_data[column].values[0]
-
-        return result
-    '''
-
     # Example usage:
     # print(get_nuclide_info("Ir-179"))
 
@@ -1316,7 +1115,7 @@ class HAZCAT():
         lambda_of_rads = []
         for nuclide_name in self.rads_list:
             nuclide_info = self.get_nuclide_info(nuclide_name)
-            # print(nuclide_info)
+            print(nuclide_info)
             half_lives.append(nuclide_info['Half-life (s)'])
             lambda_of_rads.append(nuclide_info['Decay Constant (s^-1)'])
 
@@ -1327,77 +1126,6 @@ class HAZCAT():
 
         # unit: second
         self.list_half_life = half_lives
-
-        return self.list_half_life, self.lambda_of_rads
-
-    def find_half_life_and_decay_const_radionuclides(self):
-        """
-            Find the half-life and decay constant for radionuclides.
-
-            This method reads data from the "RadioToxicityMaster.xls" file to find the half-life and decay constant
-            (lambda) for each radionuclide in the `rads_list`.
-
-            Returns:
-                tuple: A tuple containing two lists: `list_half_life`, which contains the half-life of each radionuclide in
-                    seconds, and `lambda_of_rads`, which contains the decay constant (lambda) of each radionuclide in
-                    per second.
-            Raises:
-                ValueError: If the unit of half-life is not recognized. It should be 'a' or 'y' for year, 'd' for days, 'h'
-                    for hours, 'm' for minutes, or 's' for seconds.
-        """
-        # lambda
-        xls = pd.ExcelFile("library/RadioToxicityMaster.xls")
-        name = pd.read_excel(xls, "Inhalation CED Sv per Bq Public")
-        name.dropna(axis=0, how='all', inplace=True)
-
-        # calculate half-life in second
-        lambda_of_rads = []
-        list_half_life = []
-        for rad in self.rads_list:
-            search_string = '|'.join([rad])
-            df = name[name['Nuclide'].str.contains(search_string, na=False)]
-            if str('d') in df['Hal-life'].iloc[0]:
-                x = float(df['Hal-life'].iloc[0][:-1])
-                x = x * 3600 * 24
-                lambda_of_rad = (0.693 / x)
-                lambda_of_rads.append(lambda_of_rad)
-                # unit second
-                list_half_life.append(x)
-
-            elif str('a') in df['Hal-life'].iloc[0] or str('y') in df['Hal-life'].iloc[0]:
-                x = float(df['Hal-life'].iloc[0][:-1])
-                x = x * 3600 * 24 * 365
-                lambda_of_rad = (0.693 / x)
-                lambda_of_rads.append(lambda_of_rad)
-                list_half_life.append(x)
-
-            elif str('h') in df['Hal-life'].iloc[0]:
-                x = float(df['Hal-life'].iloc[0][:-1])
-                x = x * 3600
-                lambda_of_rad = (0.693 / x)
-                lambda_of_rads.append(lambda_of_rad)
-                list_half_life.append(x)
-
-            elif str('m') in df['Hal-life'].iloc[0]:
-                x = float(df['Hal-life'].iloc[0][:-1])
-                x = x * 60
-                lambda_of_rad = (0.693 / x)
-                lambda_of_rads.append(lambda_of_rad)
-                list_half_life.append(x)
-
-            elif str('s') in df['Hal-life'].iloc[0]:
-                x = float(df['Hal-life'].iloc[0][:-1])
-                lambda_of_rad = (0.693 / x)
-                lambda_of_rads.append(lambda_of_rad)
-                list_half_life.append(x)
-
-            else:
-                raise ValueError('Unit of half-life not recognized. It should be (a or y) for year, d for days, '
-                                 'h for hours, m for minutes and s for seconds.')
-        # unit: /second
-        self.lambda_of_rads = lambda_of_rads
-        # unit: second
-        self.list_half_life = list_half_life
 
         return self.list_half_life, self.lambda_of_rads
 
@@ -2244,91 +1972,6 @@ class HAZCAT():
 
         return TQ_HC2s_curie, TQ_HC2s_gram
 
-
-
-    '''
-    def compute_threshold_quantity_HC2_in_gram_and_curie(self,
-                                                         Rs, aws, half_lives,
-                                                         dcfs_dicts_rads_list,
-                                                         CHI_BY_Q=1e-04):
-        # NRC approach
-        # HC-2: 1 rem (i.e. 10 mSv) at 100 m distance
-        # Q = Quantity of material used as threshold (grams)
-        # R = Release fraction for material of concern (unitless)
-        # H_I = Effective dose equivalent from inhalation (rem/gm-released)
-        # H_G = Effective dose equivalent from ground contamination (rem/gm-released)
-        # H_CS = Effective dose equivalent from cloud shine (rem/gm-released)
-
-        # Q = 1/(R*(H_I+H_G+H_CS))
-
-        # DOE approach
-        # TQ_HC2 = Quantity of material used as threshold (grams)
-        # R = release fraction of material averaged over an entire facility (unitless)
-        # SA = Specific activity of radionuclide released (Ci/gm)
-        # chi_by_Q = Meteorological dispersion coefficient (1E-4 sec/m 3 ) 
-        # CHI_BY_Q = 1e-04
-        # DCF inhalation = Inhalation Dose Coefficient (Sv/Bq)
-        # BR = Respiration rate (3.3333E-4 m 3 /sec)
-        BR = 3.3333E-4
-        # DC_submersion = Air Submersion Dose Coefficient (Sv/sec per Bq/m 3 )
-        # AW = Atomic weight
-        # t_half = halflife (in second)
-        # calculate specific activity
-        N_0 = 6.022E+23
-        TQ_HC2s_gram = []
-        TQ_HC2s_curie = []
-
-        for ndx, rad in enumerate(self.rads_list):
-            AW = aws[ndx]
-            t_half = half_lives[ndx]
-            DCF_inhalation = dcfs_dicts_rads_list[rad]['max_dcf_inh_hc2']
-            DCF_submersion = dcfs_dicts_rads_list[rad]['max_dcf_sub_hc2']
-            R = Rs[ndx]
-            # unit Ci/gm; for Ir-192 ~ 9220 Ci/gm
-            SA = (np.log(2) * N_0) / (AW * t_half * 3.7E+10)
-            # print("DCF_inhalationsss:", DCF_inhalation)
-            if isinstance(DCF_inhalation, str):
-                try:
-                    DCF_inhalation = float(DCF_inhalation)  # Convert to float if it's a string
-                except ValueError:
-                    DCF_inhalation = np.nan  # Assign NaN if conversion fails
-
-            if isinstance(DCF_submersion, str):
-                try:
-                    DCF_submersion = float(DCF_submersion)  # Convert to float if it's a string
-                except ValueError:
-                    DCF_submersion = np.nan  # Assign NaN if conversion fails
-
-            if np.isnan(DCF_inhalation):
-                print(f"WARNING: Inhalation DCF not found for {rad} during HC2 TQ calculation".format(rad))
-                DCF_inhalation = 0
-
-            if np.isnan(DCF_submersion):
-                print(f"WARNING: Submersion DCF not found for {rad} during HC2 TQ calculation".format(rad))
-                DCF_submersion = 0
-
-            # if np.isnan(DCF_submersion):
-            #    print(f"WARNING: Submersion DCF not found for {rad} during HC2 TQ calculation".format(rad))
-            #    DCF_submersion = 0
-
-            # gm
-            denominator = R * SA * CHI_BY_Q * ((DCF_inhalation * BR) + DCF_submersion)
-
-            if denominator == 0:
-                TQ_HC2 = float('inf')  # Or use a default value
-            else:
-                TQ_HC2 = np.array(1 / denominator)
-
-            # TQ_HC2 = np.array(1 / denom)
-
-            # unit conversion factor
-            factor = (0.01 / 3.7e10)
-            TQ_HC2_gram = TQ_HC2 * factor
-            TQ_HC2_curie = TQ_HC2_gram * SA
-            TQ_HC2s_gram.append(TQ_HC2_gram)
-            TQ_HC2s_curie.append(TQ_HC2_curie)
-        return TQ_HC2s_curie, TQ_HC2s_gram
-    '''
     def compute_inhalation_threshold_quantity_HC3_in_gram_and_curie(self, Rs, aws, BVs,
                                                                     half_lives, E1s,
                                                                     dcfs_dicts_rads_list,

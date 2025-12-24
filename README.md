@@ -70,7 +70,7 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 - **Python Version:**  
   - Tkinter GUI: Python ≥ 3.7  
   - Streamlit GUI: Python ≥ 3.8 recommended  
-
+  - sudo dnf install python3-tkinter
 ---
 
 ## Installation
@@ -78,7 +78,7 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 ### Common Backend Dependencies
 
 ```bash
-sudo dnf install python3-tkinter
+
 pip install numpy pandas matplotlib streamlit
 
 ## RUN using tkinter based GUI

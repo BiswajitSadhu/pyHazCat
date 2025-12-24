@@ -81,6 +81,8 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 
 pip install numpy pandas matplotlib streamlit
 
+---
+
 ## RUN using tkinter based GUI
 
 '''bash

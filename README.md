@@ -78,11 +78,17 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 ### Common Backend Dependencies
 
 ```bash
-pip install numpy pandas
+sudo dnf install python3-tkinter
+pip install numpy pandas matplotlib streamlit
 
 '''bash
 cd /path/to/pyHazCat
 python xgui.py
+
+'''bash
+cd /path/to/pyHazCat
+streamlit run streamlit_app.py
+
 
 
 

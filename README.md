@@ -81,9 +81,13 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 sudo dnf install python3-tkinter
 pip install numpy pandas matplotlib streamlit
 
+### RUN using tkinter based GUI
+
 '''bash
 cd /path/to/pyHazCat
 python xgui.py
+
+### RUN using streamlit based GUI
 
 '''bash
 cd /path/to/pyHazCat

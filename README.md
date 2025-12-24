@@ -1,35 +1,84 @@
-# pyHazCat GUI - Hazard Categorization Tool
+# pyHazCat GUI – Hazard Categorization Tool
 
 ## Introduction
-**pyHazCat** is a graphical user interface (GUI) tool for **hazard categorization (HazCat)** of radionuclides. It enables users to:
-- ✅ Select radionuclides for analysis.
-- ✅ Specify inventory values and release fractions.
-- ✅ Compute threshold quantities (TQ) for HC2 & HC3.
-- ✅ Automatically generate reports in text and CSV formats.
-- ✅ Save and load configurations using JSON files.
+
+**pyHazCat** is a graphical user interface (GUI)–based tool for **Hazard Categorization (HazCat)** of radionuclides, developed for applications in **nuclear and radiological facilities**.  
+It implements hazard screening and categorization consistent with **DOE-STD-1027-2018–style methodologies**, with extensions and refinements implemented in the pyHazCat framework.
+
+pyHazCat supports **two interchangeable GUI frontends**:
+
+- 🖥️ **Tkinter-based Desktop GUI** (offline, lightweight)
+- 🌐 **Streamlit-based Web GUI** (modern, scalable, browser-based)
+
+Both interfaces use the **same computational backend**, ensuring identical results and full traceability.
+
+---
+
+## Key Features
+
+- Selection of single or multiple radionuclides  
+- Inventory specification and optional release fractions  
+- Computation of **Threshold Quantities (TQ)** for **HC-2** and **HC-3**  
+- Pathway-wise HC-3 breakdown  
+  (Inhalation, Food ingestion, Water ingestion, Direct exposure, Submersion)  
+- Automatic identification of **dominant pathway**  
+- Sum-of-Ratio (SOR) evaluation for multi-radionuclide inventories  
+- Structured output tables (CSV) and detailed text reports  
+- Save / load configurations using **JSON**  
+- Publication- and regulatory-ready outputs  
+
+---
+
+## GUI Options
+
+### 1. Tkinter-based GUI (Desktop)
+
+**Recommended for**
+- Offline systems  
+- Minimal dependencies  
+- Legacy environments  
+
+**Characteristics**
+- Desktop application  
+- Lightweight  
+- Form-based inputs  
+- Scrollable, text-style detailed output  
+
+---
+
+### 2. Streamlit-based GUI (Web)
+
+**Recommended for**
+- Large radionuclide inventories (20–50+)  
+- VM / HPC / AnuNet deployment  
+- Browser-based and collaborative workflows  
+
+**Characteristics**
+- Web-based interface (local or server-hosted)  
+- **Tabular / row-wise input** using `st.data_editor`  
+- Scales cleanly to large inventories  
+- Side-by-side HC-2 / HC-3 plots  
+- Structured pathway tables  
+- Modern UI with background theming and branding  
 
 ---
 
 ## Prerequisites
 
 ### System Requirements
-- **OS:** Fedora (or any Linux distro with Python)
-- **Python Version:** 3.x (Recommended: Python 3.8+)
-- **Required Packages:**  
-  - `tkinter` (for GUI)  
-  - `numpy` (for numerical calculations)  
-  - `pandas` (for data handling)  
-  - `json` (for config file storage)  
-
-### Installation
-Run the following commands:
-```bash
-sudo dnf install python3-tkinter
-pip install numpy pandas
+- **OS:** Linux (Fedora / Ubuntu recommended)
+- **Python Version:**  
+  - Tkinter GUI: Python ≥ 3.7  
+  - Streamlit GUI: Python ≥ 3.8 recommended  
 
 ---
-### Running the GUI
-Step 1: Open Terminal
+
+## Installation
+
+### Common Backend Dependencies
+
+```bash
+pip install numpy pandas
 
 '''bash
 cd /path/to/pyHazCat

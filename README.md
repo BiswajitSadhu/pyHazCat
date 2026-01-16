@@ -66,7 +66,7 @@ Both interfaces use the **same computational backend**, ensuring identical resul
 ## Prerequisites
 
 ### System Requirements
-- **OS:** Linux (Fedora / Ubuntu recommended)
+- **OS:** Linux (Fedora / Ubuntu recommended) for Desktop based GUI, any OS for strealit based GUI
 - **Python Version:**  
   - Tkinter GUI: Python ≥ 3.7  
   - Streamlit GUI: Python ≥ 3.8 recommended  
